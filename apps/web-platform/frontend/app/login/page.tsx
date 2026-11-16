@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Brain, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
+import { Brain, ArrowRight, Loader2, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,7 +63,27 @@ export default function LoginPage() {
                 <label htmlFor="login-password" className="block text-xs font-medium text-muted-foreground">Password</label>
                 <Link href="/forgot-password" className="text-xs text-primary hover:text-primary/80 transition-colors">Forgot password?</Link>
               </div>
-              <input id="login-password" name="password" autoComplete="current-password" required type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-11 w-full rounded-lg border border-border/50 bg-background-elevated px-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus-glow focus:outline-none transition-all" placeholder="Enter your password" />
+              <div className="relative flex items-center">
+                <input
+                  id="login-password"
+                  name="password"
+                  autoComplete="current-password"
+                  required
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-11 w-full rounded-lg border border-border/50 bg-background-elevated px-3.5 pr-10 text-sm text-foreground placeholder:text-muted-foreground/50 focus-glow focus:outline-none transition-all"
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors p-1"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <button type="submit" disabled={loading} className="btn-glow flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><span>Sign in</span><ArrowRight className="h-4 w-4" /></>}
