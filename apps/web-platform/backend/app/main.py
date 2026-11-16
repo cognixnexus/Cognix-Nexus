@@ -332,12 +332,16 @@ def _register_api_routes(target):
 _register_api_routes(app)
 
 v1_app = FastAPI(
+    docs_url="/docs" if os.getenv("COGNIX_ENV", "development").lower() != "production" else None,
+    redoc_url="/redoc" if os.getenv("COGNIX_ENV", "development").lower() != "production" else None,
+    openapi_url="/openapi.json" if os.getenv("COGNIX_ENV", "development").lower() != "production" else None,
     title="Cognix Nexus API v1",
     version="1.0.0",
     description="Versioned Cognix Nexus API.",
 )
 _register_api_routes(v1_app)
 app.mount("/v1", v1_app)
+app.mount("/api/v1", v1_app)
 
 
 @app.get("/")

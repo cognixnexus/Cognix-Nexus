@@ -384,7 +384,7 @@ function App() {
   const loadBooks = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/brain/books`, { headers: { Authorization: `Bearer ${session?.access_token || ''}` } });
+      const res = await fetch(`${API_BASE}/v1/brain/books`, { headers: { Authorization: `Bearer ${session?.access_token || ''}` } });
       if (res.ok) {
         const body = await res.json();
         setBooks(body.items || body || []);
@@ -411,7 +411,7 @@ function App() {
 
   const loadNotes = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/v1/brain/notes`, {
+      const res = await fetch(`${API_BASE}/v1/brain/notes`, {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
       });
       if (res.ok) {
@@ -427,7 +427,7 @@ function App() {
 
   const loadDueCards = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/v1/brain/level-up/reviews?due_only=true&limit=30`, {
+      const response = await fetch(`${API_BASE}/v1/brain/level-up/reviews?due_only=true&limit=30`, {
         headers: { Authorization: `Bearer ${session?.access_token || ''}` },
       });
       if (!response.ok) throw new Error('Could not load scheduled flashcards.');
@@ -462,7 +462,7 @@ function App() {
     }
     setLoading(true);
     try {
-      const generatedResponse = await fetch(`${API_BASE}/api/v1/learning/quiz/generate`, {
+      const generatedResponse = await fetch(`${API_BASE}/v1/learning/quiz/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ title: sourceNote.content.slice(0, 120) || 'Brain Vault note', content: sourceNote.content, max_cards: 5 }),
@@ -472,7 +472,7 @@ function App() {
       const generatedCards = Array.isArray(generatedBody.cards) ? generatedBody.cards : [];
       let savedCount = 0;
       for (const card of generatedCards) {
-        const saveResponse = await fetch(`${API_BASE}/api/v1/brain/level-up/reviews`, {
+        const saveResponse = await fetch(`${API_BASE}/v1/brain/level-up/reviews`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
           body: JSON.stringify({ subject: sourceNote.content.slice(0, 120) || 'Brain Vault note', question: card.question, answer: card.answer, source_id: sourceNote.id }),
@@ -493,7 +493,7 @@ function App() {
     const card = flashcards[currentCardIndex];
     if (!card || !session?.access_token) return;
     try {
-      const response = await fetch(`${API_BASE}/api/v1/brain/level-up/reviews/${encodeURIComponent(card.id)}`, {
+      const response = await fetch(`${API_BASE}/v1/brain/level-up/reviews/${encodeURIComponent(card.id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
         body: JSON.stringify({ quality }),
@@ -557,7 +557,7 @@ function App() {
     // Persist to backend. Network failures are stored on-device and can be
     // retried manually; no capture is sent to a third-party service.
     try {
-      const res = await fetch(`${API_BASE}/api/v1/brain/notes`, {
+      const res = await fetch(`${API_BASE}/v1/brain/notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}`, 'Idempotency-Key': newNote.id },
         body: JSON.stringify({ title: newNote.content.slice(0, 120) || 'Mobile capture', content: newNote.content, note_type: selectedTag, status: 'inbox' }),
@@ -586,7 +586,7 @@ function App() {
     try {
       for (const capture of offlineQueue) {
         try {
-          const response = await fetch(`${API_BASE}/api/v1/brain/notes`, {
+          const response = await fetch(`${API_BASE}/v1/brain/notes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}`, 'Idempotency-Key': capture.id },
             body: JSON.stringify({ title: capture.content.slice(0, 120) || 'Mobile capture', content: capture.content, note_type: capture.tag, status: 'inbox' }),
