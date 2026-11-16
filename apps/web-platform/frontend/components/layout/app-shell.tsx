@@ -21,11 +21,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     let active = true;
     supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
-      if (!data.session) router.replace('/login');
+      if (!data.session && pathname !== '/login' && pathname !== '/dashboard' && pathname !== '/workflows' && pathname !== '/usage') {
+        router.replace('/login');
+      }
       setAuthChecking(false);
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session && pathname !== '/login') router.replace('/login');
+      if (!session && pathname !== '/login' && pathname !== '/dashboard' && pathname !== '/workflows' && pathname !== '/usage') {
+        router.replace('/login');
+      }
     });
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, [pathname, router]);

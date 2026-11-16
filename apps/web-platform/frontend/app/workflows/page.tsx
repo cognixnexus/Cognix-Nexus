@@ -1,572 +1,588 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import Link from 'next/link';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Play,
-  Square,
-  Plus,
-  Save,
-  Trash2,
-  Settings2,
-  Sparkles,
-  ArrowRight,
+  RotateCcw,
   CheckCircle2,
-  Clock,
+  AlertCircle,
+  FileText,
+  Brain,
+  Sparkles,
+  Layers,
   Send,
   Database,
-  Brain,
-  FileText,
-  Activity,
-  Layers,
-  Zap,
-  ChevronRight,
-  X,
-  Code,
-  Download,
-  Share2,
-  Bot
+  Cpu,
+  Clock,
+  Terminal,
+  Trash2,
+  Workflow,
+  Search,
+  Network,
 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 
-// Node categories & definitions tailored for Cognix-Nexus (Second Brain AI)
-export interface WorkflowNode {
+export interface StaticStage {
   id: string;
+  stageNumber: number;
   title: string;
-  category: 'trigger' | 'ai' | 'storage' | 'action';
-  type: string;
-  x: number;
-  y: number;
-  status: 'idle' | 'running' | 'success' | 'error';
-  config: Record<string, any>;
-  icon: string;
+  subtitle: string;
+  category: 'Ingestion' | 'Planning' | 'RAG' | 'Distill' | 'Embedding' | 'Approval' | 'Memory' | 'Delivery';
+  enabled: boolean;
+  estimatedLatency: string;
+  icon: React.ElementType;
+  description: string;
+  specs: {
+    engine: string;
+    throughput: string;
+    model: string;
+  };
 }
 
-export interface WorkflowConnection {
-  id: string;
-  from: string;
-  to: string;
-}
-
-const INITIAL_NODES: WorkflowNode[] = [
+const DEFAULT_STAGES: StaticStage[] = [
   {
-    id: 'node-trigger',
-    title: 'Daily ArXiv & RSS Feed',
-    category: 'trigger',
-    type: 'Schedule & RSS Inbound',
-    x: 60,
-    y: 120,
-    status: 'idle',
-    config: {
-      schedule: '06:00 AM Daily',
-      sources: ['cs.AI arXiv', 'OpenAI Research Blog', 'HuggingFace Daily Papers'],
-      batchSize: 5,
+    id: 'cognix-stage-1',
+    stageNumber: 1,
+    title: 'Daily Ingestion & ArXiv',
+    subtitle: 'Automated Academic & RSS Feeds',
+    category: 'Ingestion',
+    enabled: true,
+    estimatedLatency: '120 ms',
+    icon: Clock,
+    description: 'Scrapes daily arXiv cs.AI papers, OpenAI research blogs, and user RSS feeds into inbound staging buffer.',
+    specs: {
+      engine: 'Feedparser + Cheerio Worker',
+      throughput: '25 papers / batch',
+      model: 'Raw Markdown Parser',
     },
-    icon: 'Clock',
   },
   {
-    id: 'node-ai-summarizer',
+    id: 'cognix-stage-2',
+    stageNumber: 2,
+    title: 'Goal Decomposition Agent',
+    subtitle: 'Research Task & Sub-Goal Planner',
+    category: 'Planning',
+    enabled: true,
+    estimatedLatency: '240 ms',
+    icon: Brain,
+    description: 'Autonomous planner agent decomposes complex research inquiries into focused search queries and key entities.',
+    specs: {
+      engine: 'Autonomous Planner V3',
+      throughput: 'Sub-second AST Plan',
+      model: 'Gemini 2.5 Flash',
+    },
+  },
+  {
+    id: 'cognix-stage-3',
+    stageNumber: 3,
+    title: 'Context Retrieval & RAG',
+    subtitle: 'Second Brain Hybrid Search',
+    category: 'RAG',
+    enabled: true,
+    estimatedLatency: '180 ms',
+    icon: Search,
+    description: 'Retrieves relevant knowledge vault notes and historical research sessions using hybrid dense/sparse vector matching.',
+    specs: {
+      engine: 'pgvector + Qdrant Cloud',
+      throughput: 'Top-20 Chunks in 18ms',
+      model: 'Hybrid Inverted Index',
+    },
+  },
+  {
+    id: 'cognix-stage-4',
+    stageNumber: 4,
     title: 'Gemini 2.5 Knowledge Distiller',
-    category: 'ai',
-    type: 'LLM Agent',
-    x: 420,
-    y: 120,
-    status: 'idle',
-    config: {
-      model: 'gemini-2.5-pro',
-      temperature: 0.2,
-      systemPrompt: 'Summarize core insights into 3 key takeaways and actionable knowledge graph nodes.',
-      language: 'Burmese & English',
+    subtitle: 'Synthesized Insights & Takeaways',
+    category: 'Distill',
+    enabled: true,
+    estimatedLatency: '410 ms',
+    icon: Sparkles,
+    description: 'Extracts core arguments, 3 critical takeaways, and actionable node definitions for the second brain graph.',
+    specs: {
+      engine: 'Distiller Pipeline Pro',
+      throughput: '1M Token Context',
+      model: 'Gemini 2.5 Pro (Bilingual)',
     },
-    icon: 'Brain',
   },
   {
-    id: 'node-qdrant',
+    id: 'cognix-stage-5',
+    stageNumber: 5,
     title: 'Qdrant Vector Embedding',
-    category: 'storage',
-    type: 'Vector Indexer',
-    x: 780,
-    y: 70,
-    status: 'idle',
-    config: {
-      collection: 'cognix_second_brain',
-      embeddingModel: 'text-embedding-004',
-      similarityMetric: 'Cosine',
+    subtitle: '1536-dim Semantic Vectorization',
+    category: 'Embedding',
+    enabled: true,
+    estimatedLatency: '210 ms',
+    icon: Database,
+    description: 'Generates normalized dense embeddings using Voyage AI voyage-4 for sub-millisecond similarity recall.',
+    specs: {
+      engine: 'Qdrant Distributed Cluster',
+      throughput: '1536 Dimensions',
+      model: 'Voyage AI voyage-4',
     },
-    icon: 'Database',
   },
   {
-    id: 'node-quiz-gen',
-    title: 'Auto-Quiz & Flashcards',
-    category: 'ai',
-    type: 'Cognitive Flashcards',
-    x: 780,
-    y: 280,
-    status: 'idle',
-    config: {
-      difficulty: 'Spaced Repetition (SM-2)',
-      quizCount: 3,
-      targetDeck: 'Cognix AI Mastery',
+    id: 'cognix-stage-6',
+    stageNumber: 6,
+    title: 'Human-in-the-Loop Review',
+    subtitle: 'Telegram Approval & Verification',
+    category: 'Approval',
+    enabled: false, // Default bypassed
+    estimatedLatency: 'Bypassed',
+    icon: Send,
+    description: 'Interactive verification prompt sent to Telegram Topic #Cognix-Nexus for manual fact-checking and sign-off.',
+    specs: {
+      engine: 'Telegram Bot API / Topic 6',
+      throughput: 'Instant Push Alert',
+      model: 'Interactive Inline Callback',
     },
-    icon: 'Sparkles',
   },
   {
-    id: 'node-telegram-digest',
+    id: 'cognix-stage-7',
+    stageNumber: 7,
+    title: 'Auto-Quiz & Memory Matrix',
+    subtitle: 'SM-2 Spaced Repetition Cards',
+    category: 'Memory',
+    enabled: true,
+    estimatedLatency: '160 ms',
+    icon: Network,
+    description: 'Automatically generates 3 conceptual flashcards and links them to the user Level Up 20 daily mastery deck.',
+    specs: {
+      engine: 'SuperMemo SM-2 Scheduler',
+      throughput: '3 Flashcards / Note',
+      model: 'Cognitive Matrix V2',
+    },
+  },
+  {
+    id: 'cognix-stage-8',
+    stageNumber: 8,
     title: 'Telegram Morning Digest',
-    category: 'action',
-    type: 'Telegram Notification',
-    x: 1140,
-    y: 180,
-    status: 'idle',
-    config: {
-      channelTopic: '#Cognix-Nexus',
-      includeFlashcard: true,
-      time: '07:30 AM',
+    subtitle: 'Delivery & Durable Brain Vault Save',
+    category: 'Delivery',
+    enabled: true,
+    estimatedLatency: '290 ms',
+    icon: Layers,
+    description: 'Saves immutable note in Supabase Vault and broadcasts 07:30 AM audio/text briefing to Telegram mobile app.',
+    specs: {
+      engine: 'Supabase + Telegram Webhook',
+      throughput: 'Zero Loss Persistence',
+      model: 'Markdown + TTS Audio Card',
     },
-    icon: 'Send',
   },
 ];
 
-const INITIAL_CONNECTIONS: WorkflowConnection[] = [
-  { id: 'c1', from: 'node-trigger', to: 'node-ai-summarizer' },
-  { id: 'c2', from: 'node-ai-summarizer', to: 'node-qdrant' },
-  { id: 'c3', from: 'node-ai-summarizer', to: 'node-quiz-gen' },
-  { id: 'c4', from: 'node-qdrant', to: 'node-telegram-digest' },
-  { id: 'c5', from: 'node-quiz-gen', to: 'node-telegram-digest' },
-];
-
-const AVAILABLE_MODULES = [
-  { title: 'Telegram Webhook Trigger', category: 'trigger', type: 'Instant Webhook', icon: 'Send', desc: 'Runs when user sends /ask or paper link to Telegram bot' },
-  { title: 'Obsidian Vault Sync', category: 'storage', type: 'Markdown Storage', icon: 'FileText', desc: 'Syncs structured daily notes into Obsidian vault' },
-  { title: 'Deep Research Fact-Checker', category: 'ai', type: 'Verification Agent', icon: 'Sparkles', desc: 'Cross-verifies claims against semantic scholar' },
-  { title: 'Anki Web Sync', category: 'action', type: 'Deck Exporter', icon: 'Zap', desc: 'Exports generated flashcards directly into Anki' },
-];
+interface LogEntry {
+  id: string;
+  time: string;
+  stageName: string;
+  message: string;
+  type: 'info' | 'success' | 'warn';
+}
 
 export default function WorkflowsPage() {
-  const [nodes, setNodes] = useState<WorkflowNode[]>(INITIAL_NODES);
-  const [connections, setConnections] = useState<WorkflowConnection[]>(INITIAL_CONNECTIONS);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [stages, setStages] = useState<StaticStage[]>(DEFAULT_STAGES);
+  const [selectedStageId, setSelectedStageId] = useState<string>('cognix-stage-1');
   const [isRunning, setIsRunning] = useState(false);
-  const [executionStep, setExecutionStep] = useState<number>(-1);
-  const [logs, setLogs] = useState<Array<{ timestamp: string; nodeTitle: string; message: string; type: 'info' | 'success' | 'warn' }>>([
-    { timestamp: '06:00:00', nodeTitle: 'SYSTEM', message: 'Workflow pipeline loaded. Engine standby.', type: 'info' }
+  const [activeRunningId, setActiveRunningId] = useState<string | null>(null);
+  const [completedStageIds, setCompletedStageIds] = useState<string[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([
+    {
+      id: 'log-1',
+      time: '06:00:00',
+      stageName: 'COGNIX-ORCHESTRATOR',
+      message: 'Autonomous Second Brain Multi-Agent Pipeline initialized.',
+      type: 'info',
+    },
+    {
+      id: 'log-2',
+      time: '06:00:01',
+      stageName: 'REVIEW GATE',
+      message: 'Stage 6 (Human-in-the-Loop Review) is set to BYPASS — direct delivery to Memory Matrix.',
+      type: 'warn',
+    },
   ]);
-  const [showAddDrawer, setShowAddDrawer] = useState(false);
-  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-  const canvasRef = useRef<HTMLDivElement>(null);
+  const logEndRef = useRef<HTMLDivElement>(null);
 
-  const selectedNode = useMemo(() => nodes.find(n => n.id === selectedNodeId) || null, [nodes, selectedNodeId]);
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [logs]);
 
-  // Handle Dragging
-  const handleMouseDown = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    setSelectedNodeId(id);
-    const node = nodes.find(n => n.id === id);
-    if (!node) return;
-    setDraggingNodeId(id);
-    setDragOffset({
-      x: e.clientX - node.x,
-      y: e.clientY - node.y,
-    });
+  const selectedStage = stages.find(s => s.id === selectedStageId) || stages[0];
+
+  const handleToggleStage = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setStages(prev =>
+      prev.map(s => {
+        if (s.id !== id) return s;
+        const nextState = !s.enabled;
+        const logMsg: LogEntry = {
+          id: `log-${Date.now()}`,
+          time: new Date().toLocaleTimeString(),
+          stageName: s.title.toUpperCase(),
+          message: nextState
+            ? `Stage activated in pipeline bus.`
+            : `Stage DEACTIVATED — auto-bypass arc enabled.`,
+          type: nextState ? 'info' : 'warn',
+        };
+        setLogs(l => [...l, logMsg]);
+        return {
+          ...s,
+          enabled: nextState,
+          estimatedLatency: nextState ? (s.id === 'cognix-stage-6' ? '350 ms' : s.estimatedLatency) : 'Bypassed',
+        };
+      })
+    );
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!draggingNodeId) return;
-    const canvasRect = canvasRef.current?.getBoundingClientRect();
-    if (!canvasRect) return;
-
-    const newX = Math.max(20, Math.min(1600, e.clientX - dragOffset.x));
-    const newY = Math.max(20, Math.min(900, e.clientY - dragOffset.y));
-
-    setNodes(prev => prev.map(n => n.id === draggingNodeId ? { ...n, x: newX, y: newY } : n));
-  };
-
-  const handleMouseUp = () => {
-    setDraggingNodeId(null);
-  };
-
-  // Add new module to canvas
-  const handleAddModule = (module: typeof AVAILABLE_MODULES[0]) => {
-    const newId = `node-${Date.now()}`;
-    const newNode: WorkflowNode = {
-      id: newId,
-      title: module.title,
-      category: module.category as any,
-      type: module.type,
-      x: 350 + Math.random() * 200,
-      y: 200 + Math.random() * 150,
-      status: 'idle',
-      config: { note: 'Configured via Cognix-Nexus n8n engine' },
-      icon: module.icon,
-    };
-    setNodes(prev => [...prev, newNode]);
-    setShowAddDrawer(false);
-    setSelectedNodeId(newId);
+  const handleResetDefaults = () => {
+    setStages(DEFAULT_STAGES);
+    setCompletedStageIds([]);
+    setActiveRunningId(null);
     setLogs(prev => [
-      { timestamp: new Date().toLocaleTimeString(), nodeTitle: module.title, message: 'Node added to canvas.', type: 'info' },
       ...prev,
+      {
+        id: `log-${Date.now()}`,
+        time: new Date().toLocaleTimeString(),
+        stageName: 'PIPELINE CONFIG',
+        message: 'Pipeline restored to recommended Cognix Second Brain configuration.',
+        type: 'info',
+      },
     ]);
   };
 
-  const handleDeleteNode = (id: string) => {
-    setNodes(prev => prev.filter(n => n.id !== id));
-    setConnections(prev => prev.filter(c => c.from !== id && c.to !== id));
-    if (selectedNodeId === id) setSelectedNodeId(null);
-  };
-
-  // Simulate n8n Live Workflow Run
-  const handleRunWorkflow = async () => {
+  const handleRunSimulation = async () => {
     if (isRunning) return;
     setIsRunning(true);
+    setCompletedStageIds([]);
+    setActiveRunningId(null);
+
+    const activeStages = stages.filter(s => s.enabled);
     setLogs(prev => [
-      { timestamp: new Date().toLocaleTimeString(), nodeTitle: 'ENGINE', message: 'Triggering workflow execution pipeline...', type: 'info' },
       ...prev,
+      {
+        id: `log-${Date.now()}`,
+        time: new Date().toLocaleTimeString(),
+        stageName: 'SIMULATOR',
+        message: `Starting automated run for paper "Reasoning_With_Latent_Thought_Models.pdf" (${activeStages.length} active stages)...`,
+        type: 'info',
+      },
     ]);
 
-    // Reset status
-    setNodes(prev => prev.map(n => ({ ...n, status: 'idle' })));
+    for (let i = 0; i < stages.length; i++) {
+      const stage = stages[i];
+      if (!stage.enabled) {
+        setLogs(prev => [
+          ...prev,
+          {
+            id: `log-${Date.now()}-${i}`,
+            time: new Date().toLocaleTimeString(),
+            stageName: stage.title.toUpperCase(),
+            message: `[BYPASS] Stage ${stage.stageNumber} disabled — auto-routing around node.`,
+            type: 'warn',
+          },
+        ]);
+        continue;
+      }
 
-    // Sequential simulation through nodes
-    const sequence = ['node-trigger', 'node-ai-summarizer', 'node-qdrant', 'node-quiz-gen', 'node-telegram-digest'];
-
-    for (let i = 0; i < sequence.length; i++) {
-      const currentId = sequence[i];
-      setExecutionStep(i);
-
-      // Set running
-      setNodes(prev => prev.map(n => n.id === currentId ? { ...n, status: 'running' } : n));
-      const targetNode = nodes.find(n => n.id === currentId);
-
+      setActiveRunningId(stage.id);
+      setSelectedStageId(stage.id);
       setLogs(prev => [
-        { timestamp: new Date().toLocaleTimeString(), nodeTitle: targetNode?.title || currentId, message: `Processing node step [${i + 1}/${sequence.length}]...`, type: 'info' },
         ...prev,
+        {
+          id: `log-${Date.now()}-${i}`,
+          time: new Date().toLocaleTimeString(),
+          stageName: stage.title.toUpperCase(),
+          message: `Executing stage [${stage.stageNumber}/8]: ${stage.subtitle}...`,
+          type: 'info',
+        },
       ]);
 
-      await new Promise(r => setTimeout(r, 900));
+      await new Promise(r => setTimeout(r, 650));
 
-      // Set success
-      setNodes(prev => prev.map(n => n.id === currentId ? { ...n, status: 'success' } : n));
+      setCompletedStageIds(prev => [...prev, stage.id]);
       setLogs(prev => [
-        { timestamp: new Date().toLocaleTimeString(), nodeTitle: targetNode?.title || currentId, message: `Completed successfully. Payload forwarded downstream.`, type: 'success' },
         ...prev,
+        {
+          id: `log-done-${Date.now()}-${i}`,
+          time: new Date().toLocaleTimeString(),
+          stageName: stage.title.toUpperCase(),
+          message: `Stage ${stage.stageNumber} completed successfully (telemetry verified).`,
+          type: 'success',
+        },
       ]);
     }
 
-    setLogs(prev => [
-      { timestamp: new Date().toLocaleTimeString(), nodeTitle: 'ENGINE', message: 'Workflow completed! Telegram Morning Digest dispatched.', type: 'success' },
-      ...prev,
-    ]);
+    setActiveRunningId(null);
     setIsRunning(false);
-    setExecutionStep(-1);
+    setLogs(prev => [
+      ...prev,
+      {
+        id: `log-${Date.now()}-finish`,
+        time: new Date().toLocaleTimeString(),
+        stageName: 'SIMULATOR',
+        message: 'Pipeline execution complete. Flashcards added to Level Up 20 & morning digest queued.',
+        type: 'success',
+      },
+    ]);
   };
 
-  // Helper to render SVG connecting Bezier curves
-  const renderCables = () => {
-    return connections.map(conn => {
-      const fromNode = nodes.find(n => n.id === conn.from);
-      const toNode = nodes.find(n => n.id === conn.to);
-      if (!fromNode || !toNode) return null;
-
-      // Socket coordinates (card width ~ 240px, height ~ 110px)
-      const startX = fromNode.x + 240;
-      const startY = fromNode.y + 55;
-      const endX = toNode.x;
-      const endY = toNode.y + 55;
-
-      const deltaX = Math.abs(endX - startX) * 0.5;
-      const path = `M ${startX} ${startY} C ${startX + deltaX} ${startY}, ${endX - deltaX} ${endY}, ${endX} ${endY}`;
-
-      const isPulse = fromNode.status === 'running' || toNode.status === 'running';
-      const isSuccess = fromNode.status === 'success' && toNode.status === 'success';
-
-      return (
-        <g key={conn.id}>
-          <path
-            d={path}
-            fill="none"
-            stroke={isPulse ? '#38bdf8' : isSuccess ? '#10b981' : '#334155'}
-            strokeWidth={isPulse ? '3' : '2'}
-            strokeDasharray={isPulse ? '6,6' : 'none'}
-            className={isPulse ? 'animate-pulse' : ''}
-          />
-          <circle cx={startX} cy={startY} r="4" fill="#38bdf8" />
-          <circle cx={endX} cy={endY} r="4" fill="#a855f7" />
-        </g>
-      );
-    });
-  };
+  const activeCount = stages.filter(s => s.enabled).length;
 
   return (
     <AppShell>
-      <div className="flex flex-col h-[calc(100vh-64px)] bg-[#070b14] text-slate-100 overflow-hidden select-none">
-        {/* Top Control Bar */}
-        <header className="h-14 border-b border-white/[0.08] bg-[#0c1322]/80 backdrop-blur px-6 flex items-center justify-between z-20">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                <Brain className="h-5 w-5" />
-              </span>
-              <div>
-                <h1 className="text-sm font-semibold text-white tracking-wide flex items-center gap-2">
-                  Second Brain Multi-Agent Workflow
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    n8n Engine Live
-                  </span>
-                </h1>
-                <p className="text-[11px] text-slate-400">Visual automation pipeline · Telegram & Vector auto-sync</p>
-              </div>
+      <div className="space-y-6">
+        {/* Top Header Bar */}
+        <div className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-card p-5 lg:flex-row lg:items-center lg:justify-between shadow-sm">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl font-bold tracking-tight text-white">
+                Agent Workflows & Knowledge Pipeline
+              </h1>
+              <Badge className="border-primary/30 bg-primary/10 text-primary">
+                Multi-Agent Static Engine
+              </Badge>
             </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {activeCount} of {stages.length} stages active · Auto-bypass routing enabled · Zero knowledge leakage
+            </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowAddDrawer(!showAddDrawer)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-slate-200 border border-white/[0.1] transition-all"
-            >
-              <Plus className="h-3.5 w-3.5 text-cyan-400" />
-              Add Node
-            </button>
-
-            <button
-              onClick={handleRunWorkflow}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetDefaults}
               disabled={isRunning}
-              className={`flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-lg shadow-lg transition-all ${
-                isRunning
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse'
-                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold shadow-cyan-500/20'
-              }`}
+              className="h-9 rounded-xl border-border bg-background-elevated text-xs text-foreground hover:bg-muted/40"
             >
-              {isRunning ? (
-                <>
-                  <Square className="h-3.5 w-3.5 animate-spin" /> Executing Pipeline...
-                </>
-              ) : (
-                <>
-                  <Play className="h-3.5 w-3.5 fill-current" /> Run Workflow
-                </>
-              )}
-            </button>
-
-            <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 border border-white/[0.08]">
-              <Save className="h-3.5 w-3.5" /> Save
-            </button>
+              <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset Defaults
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleRunSimulation}
+              disabled={isRunning}
+              className="h-9 rounded-xl bg-primary px-4 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/25 hover:opacity-90"
+            >
+              <Play className={`mr-1.5 h-3.5 w-3.5 ${isRunning ? 'animate-spin' : ''}`} />
+              {isRunning ? 'Processing...' : 'Run Pipeline Simulation'}
+            </Button>
           </div>
-        </header>
-
-        {/* Main Canvas Workspace */}
-        <div className="flex-1 relative overflow-hidden flex" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}>
-          {/* Visual Canvas Area */}
-          <div
-            ref={canvasRef}
-            onClick={() => setSelectedNodeId(null)}
-            className="flex-1 h-full relative cursor-grab active:cursor-grabbing overflow-auto"
-            style={{
-              backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px)',
-              backgroundSize: '24px 24px',
-              backgroundColor: '#070b14',
-            }}
-          >
-            {/* SVG Connecting Cables */}
-            <svg className="absolute inset-0 w-[2000px] h-[1200px] pointer-events-none z-0">
-              {renderCables()}
-            </svg>
-
-            {/* Workflow Nodes */}
-            {nodes.map(node => {
-              const isSelected = selectedNodeId === node.id;
-              const isRunningNode = node.status === 'running';
-              const isSuccessNode = node.status === 'success';
-
-              const categoryColors = {
-                trigger: 'from-amber-500/20 to-orange-500/10 border-amber-500/40 text-amber-400',
-                ai: 'from-cyan-500/20 to-blue-500/10 border-cyan-500/40 text-cyan-400',
-                storage: 'from-violet-500/20 to-purple-500/10 border-violet-500/40 text-violet-400',
-                action: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/40 text-emerald-400',
-              };
-
-              return (
-                <div
-                  key={node.id}
-                  onMouseDown={e => handleMouseDown(e, node.id)}
-                  style={{
-                    transform: `translate3d(${node.x}px, ${node.y}px, 0)`,
-                    width: '240px',
-                  }}
-                  className={`absolute z-10 rounded-xl border p-3.5 backdrop-blur-md bg-slate-900/90 shadow-xl transition-shadow select-none ${
-                    isSelected ? 'ring-2 ring-cyan-400 border-cyan-400 shadow-cyan-500/20' : 'border-white/10 hover:border-white/20'
-                  } ${isRunningNode ? 'ring-2 ring-amber-400 animate-pulse' : ''} ${
-                    isSuccessNode ? 'border-emerald-500/60 shadow-emerald-500/10' : ''
-                  }`}
-                >
-                  {/* Left Target Socket */}
-                  <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-slate-900 border-2 border-cyan-400 hover:scale-125 transition-transform" />
-
-                  {/* Right Source Socket */}
-                  <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-slate-900 border-2 border-purple-400 hover:scale-125 transition-transform" />
-
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className={`p-1.5 rounded-lg bg-gradient-to-br border ${categoryColors[node.category]}`}>
-                        {node.category === 'trigger' && <Clock className="h-4 w-4" />}
-                        {node.category === 'ai' && <Brain className="h-4 w-4" />}
-                        {node.category === 'storage' && <Database className="h-4 w-4" />}
-                        {node.category === 'action' && <Send className="h-4 w-4" />}
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-                          {node.category}
-                        </span>
-                        <h3 className="text-xs font-semibold text-white leading-tight">{node.title}</h3>
-                      </div>
-                    </div>
-
-                    {/* Status Pip */}
-                    <span
-                      className={`h-2 w-2 rounded-full ${
-                        node.status === 'running'
-                          ? 'bg-amber-400 animate-ping'
-                          : node.status === 'success'
-                          ? 'bg-emerald-400'
-                          : 'bg-slate-600'
-                      }`}
-                    />
-                  </div>
-
-                  <p className="text-[11px] text-slate-400 line-clamp-1 mb-2.5 font-mono">{node.type}</p>
-
-                  <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[10px] text-slate-400">
-                    <span className="truncate max-w-[150px]">
-                      {node.config.schedule || node.config.model || node.config.collection || node.config.channelTopic || 'Configured'}
-                    </span>
-                    <button
-                      onClick={e => {
-                        e.stopPropagation();
-                        handleDeleteNode(node.id);
-                      }}
-                      className="text-slate-500 hover:text-rose-400 p-0.5 rounded transition-colors"
-                      title="Delete Node"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Right Slide-Over Inspector Drawer */}
-          {selectedNode && (
-            <div className="w-80 border-l border-white/[0.08] bg-[#0c1322]/95 backdrop-blur-xl p-5 flex flex-col z-20 shadow-2xl overflow-y-auto">
-              <div className="flex items-center justify-between pb-3 border-b border-white/[0.08] mb-4">
-                <div className="flex items-center gap-2">
-                  <Settings2 className="h-4 w-4 text-cyan-400" />
-                  <h2 className="text-sm font-semibold text-white">Node Inspector</h2>
-                </div>
-                <button
-                  onClick={() => setSelectedNodeId(null)}
-                  className="text-slate-400 hover:text-white p-1 rounded-md"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="space-y-4 text-xs">
-                <div>
-                  <label className="text-[10px] font-mono uppercase text-slate-400 block mb-1">Title</label>
-                  <input
-                    type="text"
-                    value={selectedNode.title}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setNodes(prev => prev.map(n => n.id === selectedNode.id ? { ...n, title: val } : n));
-                    }}
-                    className="w-full px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.1] text-white focus:outline-none focus:border-cyan-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-mono uppercase text-slate-400 block mb-1">Type & Category</label>
-                  <div className="px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06] text-slate-300 font-mono text-[11px]">
-                    {selectedNode.type} ({selectedNode.category})
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-mono uppercase text-slate-400 block mb-1">Parameters (JSON)</label>
-                  <pre className="p-3 rounded-lg bg-black/40 border border-white/[0.08] text-[11px] text-cyan-300 font-mono overflow-x-auto">
-                    {JSON.stringify(selectedNode.config, null, 2)}
-                  </pre>
-                </div>
-
-                <div className="pt-4 border-t border-white/[0.08]">
-                  <button
-                    onClick={() => handleDeleteNode(selectedNode.id)}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 transition-all font-medium text-xs"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" /> Remove from Pipeline
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Add Module Modal / Drawer */}
-          {showAddDrawer && (
-            <div className="absolute top-4 left-6 w-80 bg-[#0d1627] border border-white/10 rounded-xl shadow-2xl p-4 z-30 backdrop-blur-xl">
-              <div className="flex items-center justify-between pb-2 border-b border-white/[0.08] mb-3">
-                <span className="text-xs font-semibold text-white flex items-center gap-1.5">
-                  <Plus className="h-3.5 w-3.5 text-cyan-400" /> Available Node Modules
-                </span>
-                <button onClick={() => setShowAddDrawer(false)} className="text-slate-400 hover:text-white">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                {AVAILABLE_MODULES.map((mod, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleAddModule(mod)}
-                    className="w-full text-left p-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] hover:border-cyan-500/30 transition-all flex flex-col gap-1 group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-slate-200 group-hover:text-cyan-300">{mod.title}</span>
-                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-400 uppercase">
-                        {mod.category}
-                      </span>
-                    </div>
-                    <span className="text-[11px] text-slate-400 leading-normal">{mod.desc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Bottom Real-time Execution Logs Panel */}
-        <div className="h-32 border-t border-white/[0.08] bg-[#070d18] px-6 py-2.5 flex flex-col z-20">
-          <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.06]">
-            <div className="flex items-center gap-2">
-              <Activity className="h-3.5 w-3.5 text-cyan-400" />
-              <span className="text-xs font-mono font-medium text-slate-300">EXECUTION TELEMETRY & AUDIT</span>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-slate-400 font-mono">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" />
-              {isRunning ? 'EXECUTION IN PROGRESS' : 'ENGINE READY'}
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto font-mono text-[11px] space-y-1 pt-1.5">
-            {logs.map((log, index) => (
-              <div key={index} className="flex items-center gap-3">
-                <span className="text-slate-500">{log.timestamp}</span>
-                <span className="text-cyan-400 font-semibold">[{log.nodeTitle}]</span>
-                <span className={log.type === 'success' ? 'text-emerald-400' : log.type === 'warn' ? 'text-amber-400' : 'text-slate-300'}>
-                  {log.message}
+        {/* Main Grid: Pipeline Canvas & Telemetry Log */}
+        <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+          {/* Left: 8-Stage Visual Pipeline */}
+          <div className="space-y-4">
+            <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-xs text-muted-foreground flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary shrink-0" />
+                <span>Pre-configured Multi-Agent Flow: Toggle any stage to bypass it. Pipeline auto-routes around disabled agents.</span>
+              </div>
+              <div className="flex items-center gap-3 text-[11px] shrink-0 font-medium">
+                <span className="flex items-center gap-1.5 text-emerald-400">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" /> Active
+                </span>
+                <span className="flex items-center gap-1.5 text-amber-400">
+                  <span className="h-2 w-2 rounded-full bg-amber-400" /> Bypassed
                 </span>
               </div>
-            ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {stages.map(stage => {
+                const isSelected = selectedStageId === stage.id;
+                const isRunningThis = activeRunningId === stage.id;
+                const isCompleted = completedStageIds.includes(stage.id);
+                const StageIcon = stage.icon;
+
+                return (
+                  <div
+                    key={stage.id}
+                    onClick={() => setSelectedStageId(stage.id)}
+                    className={`group relative cursor-pointer rounded-2xl border p-4 transition-all duration-150 ${
+                      isSelected
+                        ? 'border-primary bg-primary/10 shadow-[0_0_20px_rgba(0,229,255,0.18)]'
+                        : stage.enabled
+                        ? 'border-border/60 bg-card hover:border-primary/40 hover:bg-card/90'
+                        : 'border-border/40 bg-background-surface opacity-60 hover:opacity-80'
+                    }`}
+                  >
+                    {/* Top Bar: Stage Number & Toggle */}
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-lg bg-background-elevated px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Stage {stage.stageNumber}
+                      </span>
+                      <Switch
+                        checked={stage.enabled}
+                        onCheckedChange={() => handleToggleStage(stage.id)}
+                        onClick={e => e.stopPropagation()}
+                        className="data-[state=checked]:bg-primary"
+                      />
+                    </div>
+
+                    {/* Stage Icon & Title */}
+                    <div className="mt-3 flex items-start gap-3">
+                      <div
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                          isRunningThis
+                            ? 'animate-pulse bg-primary text-primary-foreground'
+                            : isCompleted
+                            ? 'bg-emerald-500/20 text-emerald-400'
+                            : stage.enabled
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        <StageIcon className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-white">{stage.title}</p>
+                        <p className="truncate text-[11px] text-muted-foreground">{stage.subtitle}</p>
+                      </div>
+                    </div>
+
+                    {/* Bottom Metrics & Status */}
+                    <div className="mt-4 flex items-center justify-between border-t border-border/40 pt-2.5 text-[11px]">
+                      {stage.enabled ? (
+                        <span className="flex items-center gap-1.5 text-emerald-400">
+                          {isCompleted ? (
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          ) : (
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                          )}
+                          <span>{isCompleted ? 'Passed' : 'Ready'}</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 text-amber-400">
+                          <AlertCircle className="h-3.5 w-3.5" />
+                          <span>Bypassed</span>
+                        </span>
+                      )}
+                      <span className="font-mono text-muted-foreground">{stage.estimatedLatency}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Node Inspector Panel */}
+            <div className="rounded-2xl border border-border/60 bg-card p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                    <selectedStage.icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-white">
+                        Stage {selectedStage.stageNumber}: {selectedStage.title}
+                      </h3>
+                      <Badge
+                        className={
+                          selectedStage.enabled
+                            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px]'
+                            : 'border-amber-500/30 bg-amber-500/10 text-amber-400 text-[10px]'
+                        }
+                      >
+                        {selectedStage.enabled ? 'Active In Swarm' : 'Bypassed'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{selectedStage.subtitle}</p>
+                  </div>
+                </div>
+
+                <Button
+                  variant={selectedStage.enabled ? 'destructive' : 'default'}
+                  size="sm"
+                  onClick={() => handleToggleStage(selectedStage.id)}
+                  className={`h-9 rounded-xl text-xs font-semibold ${
+                    selectedStage.enabled
+                      ? 'border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20'
+                      : 'bg-primary text-primary-foreground hover:opacity-90'
+                  }`}
+                >
+                  {selectedStage.enabled ? 'Deactivate (Bypass)' : 'Activate Stage'}
+                </Button>
+              </div>
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                <div className="rounded-xl border border-border/40 bg-background-surface p-3.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">AGENT ENGINE & PURPOSE</p>
+                  <p className="mt-1.5 text-xs font-semibold text-foreground">{selectedStage.specs.engine}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed">{selectedStage.description}</p>
+                </div>
+
+                <div className="rounded-xl border border-border/40 bg-background-surface p-3.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">MODEL & LATENCY</p>
+                  <p className="mt-1.5 text-xs font-semibold text-primary">{selectedStage.specs.model}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Estimated Latency: <span className="font-mono text-foreground">{selectedStage.estimatedLatency}</span>
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-border/40 bg-background-surface p-3.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">THROUGHPUT & ROUTING</p>
+                  <p className="mt-1.5 text-xs font-semibold text-emerald-400">{selectedStage.specs.throughput}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Routing State:{' '}
+                    <span className="font-semibold text-foreground">
+                      {selectedStage.enabled ? 'Direct Execution' : 'Auto-Bypass Enabled'}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Live Telemetry Log Terminal */}
+          <div className="flex flex-col rounded-2xl border border-border/60 bg-background-surface overflow-hidden">
+            <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 bg-card">
+              <div className="flex items-center gap-2">
+                <Terminal className="h-4 w-4 text-primary" />
+                <span className="text-xs font-bold text-white">Pipeline Telemetry Log</span>
+              </div>
+              <span className="rounded-md bg-background-elevated px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+                {logs.length} entries
+              </span>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 font-mono text-[11px] max-h-[580px]">
+              {logs.map(log => (
+                <div key={log.id} className="leading-relaxed">
+                  <span className="text-muted-foreground mr-2">{log.time}</span>
+                  <span
+                    className={
+                      log.type === 'success'
+                        ? 'text-emerald-400 font-semibold'
+                        : log.type === 'warn'
+                        ? 'text-amber-400 font-semibold'
+                        : 'text-primary font-semibold'
+                    }
+                  >
+                    [{log.stageName}]
+                  </span>{' '}
+                  <span className="text-slate-300">{log.message}</span>
+                </div>
+              ))}
+              <div ref={logEndRef} />
+            </div>
+
+            <div className="border-t border-border/40 p-2.5 flex items-center justify-between bg-card">
+              <span className="text-[10px] text-muted-foreground">
+                Status: <span className="text-emerald-400 font-medium">{isRunning ? 'Running' : 'Idle'}</span>
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLogs([])}
+                className="h-7 text-[10px] text-muted-foreground hover:text-white"
+              >
+                <Trash2 className="mr-1 h-3 w-3" /> Clear Log
+              </Button>
+            </div>
           </div>
         </div>
       </div>
