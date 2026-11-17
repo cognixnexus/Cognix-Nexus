@@ -1,4 +1,4 @@
-![Cognix Core — Connected Intelligence](https://raw.githubusercontent.com/cognixnexus/cognixnexus/main/assets/cognix-core-banner.svg)
+![Cognix Core — Connected Intelligence](https://raw.githubusercontent.com/cognixnexus/Cognix-Nexus/main/assets/cognix-core-banner.svg)
 
 <p align="center">
   <strong>A personal knowledge OS for research, connected thinking, and durable recall.</strong><br/>
@@ -69,7 +69,7 @@ flowchart TD
     K[Cloudflare embeddings worker] <--> D
 ```
 
-This is a conceptual overview. See [Architecture Guide](docs/ARCHITECTURE.md) for repository boundaries, trust boundaries, and configuration guidance.
+This is a conceptual overview. See [Architecture Guide](docs/ARCHITECTURE.md) · [Brand Guidelines](docs/BRAND_GUIDELINES.md) for repository boundaries, trust boundaries, and configuration guidance.
 
 ## Repository structure
 
@@ -179,6 +179,7 @@ The repository includes automated workflows for frontend, backend, mobile, worke
 - [Security Policy](SECURITY.md)
 - [Contribution Guide](CONTRIBUTING.md)
 - [Architecture Guide](docs/ARCHITECTURE.md)
+- [Brand Guidelines](docs/BRAND_GUIDELINES.md)
 - [GitHub Actions](https://github.com/cognixnexus/Cognix-Nexus/actions)
 
 ## Deployment
