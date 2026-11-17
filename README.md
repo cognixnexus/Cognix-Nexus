@@ -8,9 +8,17 @@
 <p align="center">
   <a href="https://cognix-nexus.vercel.app">Live Web App</a>
   &nbsp;·&nbsp;
-  <a href="https://cognix-core-ypak.onrender.com">Backend</a>
+  <a href="https://cognix-core-ypak.onrender.com">Backend API</a>
   &nbsp;·&nbsp;
   <a href="https://github.com/cognixnexus/Cognix-Nexus/issues">Issues</a>
+  &nbsp;·&nbsp;
+  <a href="docs/ARCHITECTURE.md">Architecture</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/cognixnexus/Cognix-Nexus/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/cognixnexus/Cognix-Nexus/actions/workflows/ci.yml/badge.svg?branch=main"/></a>
+  <a href="https://github.com/cognixnexus/Cognix-Nexus/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://github.com/cognixnexus/Cognix-Nexus/actions/workflows/codeql.yml/badge.svg?branch=main"/></a>
+  <a href="https://github.com/cognixnexus/Cognix-Nexus/actions/workflows/production-ci.yml"><img alt="Production checks" src="https://github.com/cognixnexus/Cognix-Nexus/actions/workflows/production-ci.yml/badge.svg?branch=main"/></a>
 </p>
 
 <p align="center">
@@ -18,7 +26,7 @@
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Python-009688?style=flat-square&logo=fastapi"/>
   <img alt="Expo" src="https://img.shields.io/badge/React_Native-Expo-4630EB?style=flat-square&logo=expo"/>
   <img alt="Supabase" src="https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase"/>
-  <img alt="Cloudinary" src="https://img.shields.io/badge/Cloudinary-Media-3448C5?style=flat-square&logo=cloudinary"/>
+  <img alt="Cloudflare" src="https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat-square&logo=cloudflare"/>
 </p>
 
 ---
@@ -47,114 +55,150 @@ Extracted information is not automatically verified knowledge. Source traceabili
 
 ## Architecture
 
+```mermaid
+flowchart TD
+    A[Web / Mobile / Capture] --> B[FastAPI API]
+    B --> C[Validation and authorization]
+    C --> D[Ingestion and processing]
+    D --> E[Claims, concepts, embeddings]
+    E --> F[(PostgreSQL / pgvector)]
+    F --> G[Search and retrieval]
+    F --> H[Review and active recall]
+    I[Background worker] --> D
+    J[External providers] <--> D
+    K[Cloudflare embeddings worker] <--> D
+```
+
+This is a conceptual overview. See [Architecture Guide](docs/ARCHITECTURE.md) for repository boundaries, trust boundaries, and configuration guidance.
+
+## Repository structure
+
 ```text
-  Research & Capture
-  Web · PDF · Audio · Books · Mobile · Telegram
-                  |
-                  v
-  Cognix Core Processing
-  Extraction · Claims · Entities · Embeddings
-                  |
-                  v
-  Knowledge Store
-  PostgreSQL / pgvector · Evidence · Relationships
-  Concepts · Review state · Recall data
-                  |
-                  v
-  Cognix Interfaces
-  Next.js Web · Expo Mobile · Capture Bot
-                  |
-                  v
-  Search · Synthesis · Graph Exploration · Recall
+.
+├── apps/
+│   ├── mobile/                         # Expo / React Native client
+│   └── web-platform/
+│       ├── backend/                    # FastAPI API, workers, migrations, tests
+│       ├── cloudflare/embeddings-worker # Cloudflare Worker
+│       └── frontend/                   # Next.js web application
+├── docs/                               # Architecture and engineering docs
+├── scripts/                            # Production migration and verification
+├── .github/workflows/                  # CI, release checks, CodeQL
+├── render.yaml                         # Render services and configuration
+├── SECURITY.md
+└── CONTRIBUTING.md
 ```
 
 ## Technology
 
 | Layer | Technologies |
 |---|---|
-| Web | Next.js 15, React |
+| Web | Next.js 15, React, TypeScript |
 | Backend | Python 3.12, FastAPI |
 | Mobile | React Native, Expo |
 | Database & retrieval | Supabase, PostgreSQL, pgvector |
-| AI integrations | Gemini, Groq |
-| Media | Cloudinary |
+| AI integrations | Gemini, Groq, and configured provider adapters |
+| Edge processing | Cloudflare Workers |
+| Media | Cloudinary and configured object storage |
 | Deployment | Vercel, Render |
 
-The stack reflects the current project direction. Refer to source configuration for the authoritative, up-to-date implementation.
+The stack reflects the current project configuration. Refer to source and deployment files for the authoritative details.
 
-## Repository layout
+## Getting started
 
-The currently documented application areas include:
+### Requirements
 
-- `apps/web-platform/backend` — backend API and processing services
-- `apps/web-platform/frontend` — web application
+- Node.js 20+ and npm
+- Python 3.12
+- PostgreSQL with pgvector for database-backed local workflows
+- Provider credentials only for integrations you intend to exercise
 
-The source tree is the authoritative reference for additional modules and integrations.
-
-## Quick start
-
-### Backend
+### Backend API
 
 ```bash
 cd apps/web-platform/backend
 python -m venv .venv
+
+# macOS / Linux
 source .venv/bin/activate
 
-# Windows PowerShell:
+# Windows PowerShell
 # .venv\\Scripts\\Activate.ps1
 
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Frontend
+API docs are available at `http://localhost:8000/docs` when the API is running.
+
+### Web application
 
 Open a second terminal:
 
 ```bash
 cd apps/web-platform/frontend
-pnpm install
-pnpm dev
+npm ci
+npm run dev
 ```
 
-### Environment
+The frontend development script uses port `3002` by default.
 
-Configure the environment variables required by the backend and frontend integrations before starting connected services.
+### Mobile application
 
-- Keep credentials in local environment files or deployment secret managers.
-- Never commit API keys, tokens, or private user data.
-- Use example environment files when provided by the project.
+```bash
+cd apps/mobile
+npm ci
+npm run typecheck
+npm run start
+```
+
+### Cloudflare embeddings worker
+
+```bash
+cd apps/web-platform/cloudflare/embeddings-worker
+npm install
+npm test
+npm run dev
+```
+
+Configure worker secrets using Wrangler's secret management. Never commit secret values.
+
+## Environment and secrets
+
+Use the closest `.env.example` for each application. Configure required values before enabling connected providers.
+
+- Keep credentials in local environment files or hosting-provider secret managers.
+- Treat `NEXT_PUBLIC_*` and `EXPO_PUBLIC_*` variables as public client configuration.
+- Never put service-role keys, OAuth refresh tokens, or provider secrets in frontend/mobile bundles.
+- Never commit API keys, tokens, private documents, or user data.
+
+## Quality and security
+
+The repository includes automated workflows for frontend, backend, mobile, worker, dependency, CodeQL, and production-readiness checks. The badges above link to live workflow status; a workflow definition by itself is not evidence of a passing run.
+
+- [Security Policy](SECURITY.md)
+- [Contribution Guide](CONTRIBUTING.md)
+- [Architecture Guide](docs/ARCHITECTURE.md)
+- [GitHub Actions](https://github.com/cognixnexus/Cognix-Nexus/actions)
 
 ## Deployment
 
 - **Web:** [cognix-nexus.vercel.app](https://cognix-nexus.vercel.app)
-- **Backend:** [cognix-core-ypak.onrender.com](https://cognix-core-ypak.onrender.com)
+- **API:** [cognix-core-ypak.onrender.com](https://cognix-core-ypak.onrender.com)
+- **Worker runtime:** configured in [render.yaml](render.yaml)
 
-Hosted availability and feature coverage can change; check the live services and deployment configuration for current status.
-
-## Development principles
-
-1. **Evidence-first:** preserve source context for extracted knowledge.
-2. **Human review:** distinguish generated claims from approved knowledge.
-3. **Connected context:** make relationships discoverable.
-4. **Useful recall:** make captured knowledge accessible later.
-5. **Incremental architecture:** keep application surfaces and integrations maintainable.
+Hosted availability and feature coverage can change; check live services and deployment configuration for current status.
 
 ## Contributing
 
-Bug reports and focused suggestions are welcome.
-
-1. Check [existing issues](https://github.com/cognixnexus/Cognix-Nexus/issues) before opening a duplicate.
-2. Include clear reproduction steps for bugs.
-3. Describe expected and actual behavior.
-4. Never include secrets, private documents, or personal data in reports.
+Bug reports and focused suggestions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before proposing code changes. Use the issue forms for reproducible bug reports and feature requests. Do not publish vulnerability details in public issues; follow [SECURITY.md](SECURITY.md).
 
 ## License
 
-The project currently states **Private Knowledge OS License — All Rights Reserved**. No permission to redistribute or reuse source code should be inferred beyond the published terms.
+The project currently states **Private Knowledge OS License — All Rights Reserved**. This is a proprietary project; public repository visibility does not grant permission to redistribute or reuse source code.
 
 ---
 
 <p align="center">
-  <sub>PART OF THE COGNIX CORE VISION · CONNECTED KNOWLEDGE & PRACTICAL INTELLIGENCE</sub>
+  <sub>COGNIX CORE · CONNECTED INTELLIGENCE · BUILT FOR KNOWLEDGE THAT COMPOUNDS</sub>
 </p>
