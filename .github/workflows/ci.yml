@@ -120,10 +120,19 @@ jobs:
         run: python scripts/book_acceptance_contract.py --synthetic
       - name: Install PostgreSQL 17 client
         run: |
-          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
+          set -euo pipefail
+          # Retry transient TLS/network interruptions and validate the key before
+          # passing it to GPG, so a truncated download cannot fail ambiguously.
+          curl --fail --silent --show-error --location \
+            --retry 5 --retry-all-errors --retry-delay 3 --retry-max-time 120 \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            --output /tmp/pgdg.asc
+          test -s /tmp/pgdg.asc
+          sudo gpg --batch --yes --dearmor \
+            --output /usr/share/keyrings/postgresql.gpg /tmp/pgdg.asc
           echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
-          sudo apt-get update
-          sudo apt-get install -y postgresql-client-17
+          sudo apt-get -o Acquire::Retries=3 update
+          sudo apt-get -o Acquire::Retries=3 install -y postgresql-client-17
           echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
       - name: Backup and isolated restore drill
         env:
