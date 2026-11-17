@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible problem in Cognix Nexus.
+title: "[Bug]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: "Please do not include passwords, API keys, private documents, personal records, or production user data."
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the problem.
+      placeholder: Describe the unexpected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest reliable sequence of steps.
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Surface, browser/OS, app version or commit, and relevant non-secret configuration.
+      placeholder: Web / Mobile / API · Browser or OS · Commit
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or screenshots
+      description: Remove tokens, cookies, identifiers, and private content before sharing.
+    validations:
+      required: false
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Privacy check
+      options:
+        - label: I have removed secrets and private or identifying user data.
+          required: true
+        - label: I checked for an existing issue describing the same problem.
+          required: true
