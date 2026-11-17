@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest a focused improvement to Cognix Nexus.
+title: "[Feature]: "
+labels: []
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What user problem or workflow limitation are you addressing?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the smallest useful version of the improvement.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Web application
+        - Backend API
+        - Mobile application
+        - Knowledge processing / retrieval
+        - Integrations / workers
+        - Documentation / developer experience
+        - Security / privacy
+        - Not sure
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked existing issues and discussions for duplicates.
+          required: true
+        - label: This request does not expose private data or credentials.
+          required: true
