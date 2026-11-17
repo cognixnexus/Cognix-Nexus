@@ -38,8 +38,17 @@ jobs:
       - run: npm run build
       - name: Validate Playwright harness
         run: |
-          npm install --no-save --no-package-lock @playwright/test@1.51.1 playwright@1.51.1 @axe-core/playwright
-          npx playwright test --list
+          set -euo pipefail
+          # Install the test harness in isolation so npm does not re-resolve the
+          # full application dependency graph during this validation step.
+          PLAYWRIGHT_TMP="$(mktemp -d)"
+          npm install --prefix "$PLAYWRIGHT_TMP" --no-save --no-package-lock \
+            @playwright/test@1.51.1 playwright@1.51.1 @axe-core/playwright
+          mkdir -p node_modules/@playwright node_modules/@axe-core
+          ln -sfn "$PLAYWRIGHT_TMP/node_modules/@playwright/test" node_modules/@playwright/test
+          ln -sfn "$PLAYWRIGHT_TMP/node_modules/playwright" node_modules/playwright
+          ln -sfn "$PLAYWRIGHT_TMP/node_modules/@axe-core/playwright" node_modules/@axe-core/playwright
+          "$PLAYWRIGHT_TMP/node_modules/.bin/playwright" test --list
       - name: Prevent Supabase service role leakage
         run: |
           if grep -R -n 'SUPABASE_SERVICE_ROLE_KEY' . --exclude-dir=node_modules --exclude-dir=.next 2>/dev/null; then
