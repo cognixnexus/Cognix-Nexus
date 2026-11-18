@@ -52,7 +52,6 @@
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
     "eslint": "8.49.0",
-    "eslint-config-next": "13.5.1",
     "input-otp": "^1.5.0",
     "lucide-react": "^0.446.0",
     "next": "15.5.28",
@@ -80,6 +79,6 @@
     }
   },
   "devDependencies": {
-    "eslint-config-next": "13.5.1"
+    "eslint-config-next": "^15.5.28"
   }
 }

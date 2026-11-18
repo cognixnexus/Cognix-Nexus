@@ -292,10 +292,14 @@ if allowed_hosts:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
 _cors_allowed_origins = _cors_origins()
+# allow_credentials must be True for cookie/session auth to work correctly.
+# It is decoupled from origin count — the origin allowlist already enforces
+# which callers may send credentialed requests.
+_cors_allow_credentials = os.getenv("COGNIX_CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_allowed_origins,
-    allow_credentials=len(_cors_allowed_origins) == 1,
+    allow_credentials=_cors_allow_credentials,
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept", "X-Request-ID"],
 )
