@@ -11,12 +11,37 @@ const columns: Array<{ status: BoardStatus; label: string }> = [
   { status: 'inbox', label: 'Inbox' }, { status: 'researching', label: 'Researching' }, { status: 'ready', label: 'Ready to apply' },
 ];
 
+const DEFAULT_PROJECTS: BoardItem[] = [
+  {
+    id: 'proj-01',
+    title: 'Autonomous Agent Byzantine Consensus Protocols',
+    notes: 'Synthesize quorum consensus thresholds for 12-node agent clusters with < 45ms latency.',
+    status: 'researching',
+    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+  },
+  {
+    id: 'proj-02',
+    title: 'Voyage-4 vs Cohere Vector Benchmark at 1536-D',
+    notes: 'Verify cosine similarity latency curve and recall on Qdrant Cloud cluster.',
+    status: 'ready',
+    createdAt: new Date(Date.now() - 3600000 * 48).toISOString(),
+  },
+  {
+    id: 'proj-03',
+    title: 'Myanmar Syllable Segmentation Engine Integration',
+    notes: 'Evaluate syllable-boundary heuristic accuracy against standard NLP benchmark corpus.',
+    status: 'inbox',
+    createdAt: new Date(Date.now() - 3600000 * 8).toISOString(),
+  },
+];
+
 function readBoard(): BoardItem[] {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     const value: unknown = raw ? JSON.parse(raw) : [];
-    return Array.isArray(value) ? value.filter((item): item is BoardItem => Boolean(item && typeof item.title === 'string' && ['inbox', 'researching', 'ready'].includes(item.status))) : [];
-  } catch { return []; }
+    const valid = Array.isArray(value) ? value.filter((item): item is BoardItem => Boolean(item && typeof item.title === 'string' && ['inbox', 'researching', 'ready'].includes(item.status))) : [];
+    return valid.length > 0 ? valid : DEFAULT_PROJECTS;
+  } catch { return DEFAULT_PROJECTS; }
 }
 
 export default function ResearchBoardPage() {

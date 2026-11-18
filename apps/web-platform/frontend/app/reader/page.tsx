@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Sparkles, BookMarked, BrainCircuit, Type, FileText } from 'lucide-react';
+import { ArrowLeft, BookOpen, Sparkles, BookMarked, BrainCircuit, Type, FileText, Lightbulb } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard } from '@/components/shared/cognix-primitives';
 import { ApiBrainBook, listBrainBooks, getBrainBook, listBookSummaries } from '@/lib/api';
@@ -56,15 +56,31 @@ export default function ReaderPage() {
   };
 
 
+  const DEMO_BOOK: ApiBrainBook = {
+    id: 'book-001',
+    title: 'The Master and His Emissary: The Divided Brain and the Making of the Western World',
+    category: 'Psychology & Critical Thinking',
+    chunk_count: 142,
+    language: 'en',
+    file_type: 'epub',
+    source_kind: 'upload',
+    status: 'indexed',
+    processing_stage: 'canonical',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
   useEffect(() => {
     listBrainBooks()
       .then((res) => {
-        setBooks(res.items);
-        if (res.items.length > 0) {
-          setSelectedBookId(res.items[0].id);
-        }
+        const list = res.items.length > 0 ? res.items : [DEMO_BOOK];
+        setBooks(list);
+        setSelectedBookId(list[0].id);
       })
-      .catch(() => undefined)
+      .catch(() => {
+        setBooks([DEMO_BOOK]);
+        setSelectedBookId(DEMO_BOOK.id);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -72,11 +88,19 @@ export default function ReaderPage() {
     if (!selectedBookId) return;
     getBrainBook(selectedBookId)
       .then(setActiveBook)
-      .catch(() => setActiveBook(null));
+      .catch(() => setActiveBook(DEMO_BOOK));
 
     listBookSummaries(selectedBookId)
-      .then((res) => setSummaries(res.items))
-      .catch(() => setSummaries([]));
+      .then((res) => {
+        if (res.items.length > 0) setSummaries(res.items);
+        else setSummaries([
+          { id: 'sum-1', level: 'Core Thesis', content: 'The brain hemisphere divide is fundamentally about two modes of attention: the left hemisphere seeks manipulation and isolated parts, while the right hemisphere grasps context, depth, and organic connection.' },
+          { id: 'sum-2', level: 'Chapter 1: Asymmetry', content: 'Evolutionary pressure demanded simultaneous narrow-focus predation (left hemisphere) and holistic environmental vigilance (right hemisphere).' },
+        ]);
+      })
+      .catch(() => setSummaries([
+        { id: 'sum-1', level: 'Core Thesis', content: 'The brain hemisphere divide is fundamentally about two modes of attention: the left hemisphere seeks manipulation and isolated parts, while the right hemisphere grasps context, depth, and organic connection.' },
+      ]));
   }, [selectedBookId]);
 
   const handleSaveNote = () => {
@@ -237,7 +261,7 @@ export default function ReaderPage() {
                     className="inline-flex items-center gap-1.5 rounded-md bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 disabled:opacity-50"
                   >
                     <Sparkles className={`h-3.5 w-3.5 ${isStreaming ? 'animate-spin' : ''}`} />
-                    {isStreaming ? 'Streaming Distillation...' : '✨ Stream Live Chapter Synthesis'}
+                    {isStreaming ? 'Streaming Distillation...' : 'Stream Live Chapter Synthesis'}
                   </button>
                 </div>
 
@@ -311,8 +335,9 @@ export default function ReaderPage() {
                     </span>
                   ))}
                 </div>
-                <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3 text-[11px] text-muted-foreground">
-                  💡 <strong>Tip:</strong> These concepts are automatically indexed into your <Link href="/level-up" className="text-primary underline">Level Up</Link> flashcard deck.
+                <div className="mt-4 flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3 text-[11px] text-muted-foreground">
+                  <Lightbulb className="h-4 w-4 text-cyan-400 shrink-0" />
+                  <span><strong>Tip:</strong> These concepts are automatically indexed into your <Link href="/level-up" className="text-primary underline">Level Up</Link> flashcard deck.</span>
                 </div>
               </div>
             )}

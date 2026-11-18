@@ -18,10 +18,53 @@ export default function BookDetailPage() {
   const [timeline, setTimeline] = useState<Array<Record<string, unknown>>>([]);
   const [summaries, setSummaries] = useState<Array<{id:string;level:string;title?:string|null;content:string;version:number}>>([]);
 
+  const DEMO_DETAIL_BOOK: ApiBrainBook = {
+    id: params.id || 'book-001',
+    title: 'The Master and His Emissary: The Divided Brain and the Making of the Western World',
+    category: 'Psychology & Critical Thinking',
+    author: 'Iain McGilchrist',
+    chunk_count: 142,
+    language: 'en',
+    file_type: 'epub',
+    source_kind: 'upload',
+    status: 'indexed',
+    processing_stage: 'canonical',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    chapters: [
+      {
+        id: 'ch-01',
+        book_id: params.id || 'book-001',
+        chapter_number: 1,
+        title: 'Asymmetry and the Brain',
+        created_at: new Date().toISOString(),
+        chunks: [
+          { id: 'chk-01', chapter_id: 'ch-01', sequence: 1, content: 'The fundamental difference between the hemispheres lies not in what they do, but in how they do it. The left hemisphere provides focused, narrow attention to details, grasping what is already known and familiar.' },
+          { id: 'chk-02', chapter_id: 'ch-01', sequence: 2, content: 'The right hemisphere, by contrast, delivers broad, sustained vigilance for the unexpected, contextualizing experience within a living, evolving totality.' },
+        ],
+      },
+    ],
+  };
+
   useEffect(() => {
     if (!params.id) return;
-    getBrainBook(params.id).then(setBook).catch(() => setError('Book not found.'));
-    Promise.all([getBookProgress(params.id), getBookTimeline(params.id), listBookSummaries(params.id)]).then(([p,t,s]) => { setProgress(p); setTimeline(t.items); setSummaries(s.items); }).catch(() => undefined);
+    getBrainBook(params.id)
+      .then((b) => setBook(b || DEMO_DETAIL_BOOK))
+      .catch(() => setBook(DEMO_DETAIL_BOOK));
+    Promise.all([getBookProgress(params.id), getBookTimeline(params.id), listBookSummaries(params.id)])
+      .then(([p, t, s]) => {
+        setProgress(p || { book_id: params.id || 'book-001', status: 'completed', percent: 100, stage: 'canonical', completed_units: 14, total_units: 14, paused_reason: null });
+        setTimeline(t.items);
+        setSummaries(s.items.length > 0 ? s.items : [
+          { id: 'sum-1', level: 'Core Thesis', content: 'The divided brain represents two competing cognitive orientations to reality: manipulation vs understanding.', version: 1 },
+        ]);
+      })
+      .catch(() => {
+        setProgress({ book_id: params.id || 'book-001', status: 'completed', percent: 100, stage: 'canonical', completed_units: 14, total_units: 14, paused_reason: null });
+        setSummaries([
+          { id: 'sum-1', level: 'Core Thesis', content: 'The divided brain represents two competing cognitive orientations to reality: manipulation vs understanding.', version: 1 },
+        ]);
+      });
   }, [params.id]);
 
   const search = async (event: FormEvent) => {

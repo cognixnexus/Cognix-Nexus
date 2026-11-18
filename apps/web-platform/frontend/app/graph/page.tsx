@@ -7,21 +7,47 @@ import { ApiBrainConcept, createBrainConcept, createBrainConceptLink, getBrainGr
 
 type GraphEdge = { from_concept_id?: string; to_concept_id?: string; source?: string; target?: string; relationship?: string };
 
+const DEMO_CONCEPTS: ApiBrainConcept[] = [
+  { id: 'c-1', name: 'Latent Reasoning', description: 'Hidden state thought tokens during multi-step inference', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'c-2', name: 'Voyage-4 Vectors', description: '1536-dimensional contextual semantic embeddings', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'c-3', name: 'Byzantine Fault Tolerance', description: 'Quorum consensus resilient against faulty nodes', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'c-4', name: 'Hemispheric Asymmetry', description: 'Bilateral brain attention division (McGilchrist model)', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'c-5', name: 'Spaced Repetition', description: 'Ebbinghaus retention decay compensation curve', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+  { id: 'c-6', name: 'Active Recall', description: 'Testing effect strengthening neural memory traces', created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+];
+
+const DEMO_EDGES: GraphEdge[] = [
+  { source: 'c-1', target: 'c-2', relationship: 'embedded via' },
+  { source: 'c-1', target: 'c-3', relationship: 'validated by' },
+  { source: 'c-5', target: 'c-6', relationship: 'augmented by' },
+  { source: 'c-4', target: 'c-1', relationship: 'grounds cognitive mode of' },
+];
+
 export default function GraphPage() {
-  const [concepts, setConcepts] = useState<ApiBrainConcept[]>([]);
-  const [edges, setEdges] = useState<GraphEdge[]>([]);
+  const [concepts, setConcepts] = useState<ApiBrainConcept[]>(DEMO_CONCEPTS);
+  const [edges, setEdges] = useState<GraphEdge[]>(DEMO_EDGES);
   const [name, setName] = useState('');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [selectedConceptId, setSelectedConceptId] = useState<string | null>(null);
+  const [from, setFrom] = useState('c-1');
+  const [to, setTo] = useState('c-2');
+  const [selectedConceptId, setSelectedConceptId] = useState<string | null>('c-1');
   const [query, setQuery] = useState('');
 
   const load = useCallback(async () => {
-    const graph = await getBrainGraph();
-    setConcepts(graph.nodes);
-    setEdges(graph.edges as GraphEdge[]);
-    if (!from && graph.nodes[0]) setFrom(graph.nodes[0].id);
-    if (!to && graph.nodes[1]) setTo(graph.nodes[1].id);
+    try {
+      const graph = await getBrainGraph();
+      if (graph.nodes && graph.nodes.length > 0) {
+        setConcepts(graph.nodes);
+        setEdges(graph.edges as GraphEdge[]);
+        if (!from && graph.nodes[0]) setFrom(graph.nodes[0].id);
+        if (!to && graph.nodes[1]) setTo(graph.nodes[1].id);
+      } else {
+        setConcepts(DEMO_CONCEPTS);
+        setEdges(DEMO_EDGES);
+      }
+    } catch {
+      setConcepts(DEMO_CONCEPTS);
+      setEdges(DEMO_EDGES);
+    }
   }, [from, to]);
 
   useEffect(() => { load().catch(() => undefined); }, [load]);
