@@ -20,6 +20,7 @@ import {
   Network,
   MessageSquare,
   Sparkles,
+  Search,
   ChevronLeft,
   LogOut,
 } from 'lucide-react';
@@ -57,6 +58,7 @@ const navSections = [
       { label: 'Level Up 20', href: '/level-up', icon: Sparkles },
       { label: 'Knowledge Graph', href: '/graph', icon: Network },
       { label: 'Research & Projects', href: '/research-board', icon: FolderOpen },
+      { label: 'Deep Research Lab', href: '/deep-research', icon: Search },
       { label: 'Language Tutor', href: '/tutor', icon: Brain },
       { label: 'Daily Learning Plan', href: '/learning-plan', icon: Sparkles },
       { label: 'Document OCR', href: '/documents', icon: FileText },

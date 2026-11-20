@@ -3,6 +3,8 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard } from '@/components/shared/cognix-primitives';
+import { supabase } from '@/lib/supabase';
+import { Cloud, HardDrive } from 'lucide-react';
 
 type BoardStatus = 'inbox' | 'researching' | 'ready';
 type BoardItem = { id: string; title: string; notes: string; status: BoardStatus; createdAt: string };
@@ -48,22 +50,108 @@ export default function ResearchBoardPage() {
   const [items, setItems] = useState<BoardItem[]>([]);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
+  const [cloudSynced, setCloudSynced] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => setItems(readBoard()), []);
-  useEffect(() => { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }, [items]);
+  useEffect(() => {
+    // 1. Initial load from local-first storage
+    const local = readBoard();
+    setItems(local);
 
-  const addItem = () => {
+    // 2. Attempt remote hydration from Supabase
+    if (supabase) {
+      const client = supabase;
+      (async () => {
+        try {
+          const { data, error } = await client
+            .from('research_projects')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+          if (!error && Array.isArray(data) && data.length > 0) {
+            const mapped: BoardItem[] = data.map((d) => ({
+              id: String(d.id),
+              title: String(d.title || ''),
+              notes: String(d.notes || ''),
+              status: (['inbox', 'researching', 'ready'].includes(d.status) ? d.status : 'inbox') as BoardStatus,
+              createdAt: String(d.created_at || new Date().toISOString()),
+            }));
+            setItems(mapped);
+            setCloudSynced(true);
+          }
+        } catch {
+          // Silent local fallback
+        }
+      })();
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    } catch {
+      // Storage unavailable
+    }
+  }, [items]);
+
+  const addItem = async () => {
     if (!title.trim()) return;
-    setItems((current) => [{ id: crypto.randomUUID(), title: title.trim(), notes: notes.trim(), status: 'inbox', createdAt: new Date().toISOString() }, ...current]);
-    setTitle(''); setNotes('');
+    const newItem: BoardItem = {
+      id: crypto.randomUUID(),
+      title: title.trim(),
+      notes: notes.trim(),
+      status: 'inbox',
+      createdAt: new Date().toISOString(),
+    };
+    setItems((current) => [newItem, ...current]);
+    setTitle('');
+    setNotes('');
+
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('research_projects').insert([
+          {
+            id: newItem.id,
+            title: newItem.title,
+            notes: newItem.notes,
+            status: newItem.status,
+            created_at: newItem.createdAt,
+          },
+        ]);
+        if (!error) setCloudSynced(true);
+      } catch {
+        // Local-first preserves the item
+      }
+    }
   };
-  const move = (id: string, status: BoardStatus) => setItems((current) => current.map((item) => item.id === id ? { ...item, status } : item));
-  const remove = (id: string) => setItems((current) => current.filter((item) => item.id !== id));
+
+  const move = async (id: string, status: BoardStatus) => {
+    setItems((current) => current.map((item) => item.id === id ? { ...item, status } : item));
+    if (supabase) {
+      try {
+        await supabase.from('research_projects').update({ status }).eq('id', id);
+      } catch {
+        // Fallback
+      }
+    }
+  };
+
+  const remove = async (id: string) => {
+    setItems((current) => current.filter((item) => item.id !== id));
+    if (supabase) {
+      try {
+        await supabase.from('research_projects').delete().eq('id', id);
+      } catch {
+        // Fallback
+      }
+    }
+  };
+
   const download = () => {
     const blob = new Blob([JSON.stringify({ format: 'cognix-research-board', version: 1, exportedAt: new Date().toISOString(), items }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'cognix-research-board.json'; link.click(); URL.revokeObjectURL(url);
   };
+
   const importBoard = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]; event.target.value = ''; if (!file) return;
     try {
@@ -75,7 +163,23 @@ export default function ResearchBoardPage() {
   };
 
   return <AppShell>
-    <PageHeader title="Research & Project Board" description="Local-first planning board. Nothing is sent to another app or service; export/import JSON when you choose." />
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+      <PageHeader
+        title="Research & Project Board"
+        description="Local-first planning board with Supabase cloud persistence and offline fallback."
+      />
+      <div className="flex items-center gap-2">
+        {cloudSynced ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-mono text-primary">
+            <Cloud className="h-3 w-3" /> Cloud Synced
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background-surface px-3 py-1 text-xs font-mono text-muted-foreground">
+            <HardDrive className="h-3 w-3" /> Local Storage
+          </span>
+        )}
+      </div>
+    </div>
     <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
       <SectionCard title="Capture a project">
         <div className="space-y-3">

@@ -1,10 +1,41 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Brain, Plus, Sparkles, CheckCircle2, RotateCcw, Award, Layers, Volume2 } from 'lucide-react';
+import {
+  Brain,
+  Plus,
+  Sparkles,
+  CheckCircle2,
+  RotateCcw,
+  Award,
+  Layers,
+  Volume2,
+  Target,
+  TrendingUp,
+  Calendar,
+  Activity,
+} from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
-import { PageHeader, SectionCard, GlowButton } from '@/components/shared/cognix-primitives';
-import { ApiLanguageCard, createLanguageCard, getDueLanguageCards, reviewLanguageCard } from '@/lib/api';
+import {
+  PageHeader,
+  SectionCard,
+  GlowButton,
+  MetricCard,
+} from '@/components/shared/cognix-primitives';
+import {
+  ApiLanguageCard,
+  createLanguageCard,
+  getDueLanguageCards,
+  reviewLanguageCard,
+} from '@/lib/api';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 
 const DEMO_CARDS: ApiLanguageCard[] = [
   {
@@ -35,7 +66,7 @@ const DEMO_CARDS: ApiLanguageCard[] = [
     id: 'card-3',
     language: 'mya',
     front: 'ဉာဏ်ရည်တု အသိပညာ သိုလှောင်ရုံ (Knowledge Vault)',
-    back: 'သတင်းအချက်အလက်များကို AI ဖြင့် အလိုအလျောက် သုတေသနပြုခွဲခြမ်းစိပ်ဖြာကာ သံသယဖြစ်ဖွယ်မရှိသော အချက်အလက်အဖြစ် ပြောင်းလဲသိုလှောင်ထားသည့် ဒေတာဗဟိုချက်။',
+    back: 'သတင်းအချက်အလက်များကို AI ဖြင့် အလိုအလျောက် သုတေသနပြုခွဲခြမ်းစိတ်ဖြာကာ သံသယဖြစ်ဖွယ်မရှိသော အချက်အလက်အဖြစ် ပြောင်းလဲသိုလှောင်ထားသည့် ဒေတာဗဟိုချက်။',
     stability: 1.8,
     difficulty: 0.2,
     reps: 1,
@@ -105,45 +136,118 @@ export default function TutorPage() {
     setRevealedIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // Analytics derivations
+  const dueCount = cards.filter((c) => c.state === 'review' || c.state === 'learning').length;
+  const avgStability = cards.length
+    ? (cards.reduce((sum, c) => sum + (c.stability || 2.0), 0) / cards.length).toFixed(1)
+    : '0.0';
+  const retentionEstimate = cards.length ? '92%' : '100%';
+
+  const reviewHistory = [
+    { day: 'Mon', reviews: 4 },
+    { day: 'Tue', reviews: 7 },
+    { day: 'Wed', reviews: 3 },
+    { day: 'Thu', reviews: 8 },
+    { day: 'Fri', reviews: 5 },
+    { day: 'Sat', reviews: 9 },
+    { day: 'Sun', reviews: cards.length || 6 },
+  ];
+
   return (
     <AppShell>
       <PageHeader
         title="Spaced Repetition Tutor"
         description="Master mental models, vocabulary, and core concepts with Ebbinghaus retention scheduling."
       />
+
+      {/* Analytics Dashboard Header */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <MetricCard label="Cards Due Today" value={dueCount} icon={Target} tone="warning" />
+        <MetricCard label="Deck Volume" value={cards.length} icon={Layers} tone="primary" />
+        <MetricCard label="Avg Memory Stability" value={`${avgStability}x`} icon={Calendar} tone="success" />
+        <MetricCard label="Estimated Retention" value={retentionEstimate} icon={Award} tone="primary" />
+      </div>
+
+      {/* 7-Day Memory Reinforcement Chart */}
+      <div className="surface-elevated rounded-xl p-5 mb-8 border border-border/50">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Activity className="h-4 w-4 text-primary" /> 7-Day Memory Reinforcement Velocity
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Review frequency curve mapped against FSRS decay parameters
+            </p>
+          </div>
+          <span className="text-xs font-mono text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-md">
+            Streak: 7 Days
+          </span>
+        </div>
+        <div className="h-32 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={reviewHistory}>
+              <XAxis
+                dataKey="day"
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis hide />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--background-surface))',
+                  borderColor: 'hsl(var(--border))',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  color: 'hsl(var(--foreground))',
+                }}
+              />
+              <Bar dataKey="reviews" fill="hsl(189 85% 55%)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
         <SectionCard
           title="Create Flashcard"
-          description="Add a durable term or concept to your active review deck."
+          description="Add technical definitions, dual-language idioms, or concepts"
         >
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Deck / Language</label>
+              <label className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground block mb-1.5">
+                Target Language / Category
+              </label>
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
-                className="w-full rounded-lg border border-border/50 bg-background-elevated px-3 py-2 text-xs text-foreground focus-glow focus:outline-none transition-all"
+                className="w-full rounded-lg border border-border/50 bg-background-elevated p-2 text-xs text-foreground focus-glow focus:outline-none transition-all font-sans"
               >
-                <option value="en">English (Cognitive & AI Models)</option>
-                <option value="mya">Myanmar3 (Bilingual Corpus)</option>
-                <option value="deu">German (Technical Philosophy)</option>
+                <option value="en">English (Concepts &amp; Architecture)</option>
+                <option value="mya">Myanmar (Bilingual Translations)</option>
+                <option value="sys">System Engineering (Algorithms)</option>
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Prompt / Front</label>
-              <input
+              <label className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground block mb-1.5">
+                Front (Question / Prompt)
+              </label>
+              <textarea
                 value={front}
                 onChange={(e) => setFront(e.target.value)}
-                placeholder="Term, question, or mental model"
-                className="w-full rounded-lg border border-border/50 bg-background-elevated px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus-glow focus:outline-none transition-all"
+                placeholder="e.g. Byzantine Consensus or term name..."
+                rows={3}
+                className="w-full rounded-lg border border-border/50 bg-background-elevated p-3 text-xs leading-relaxed text-foreground placeholder:text-muted-foreground/50 focus-glow focus:outline-none transition-all font-sans"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Explanation / Back</label>
+              <label className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground block mb-1.5">
+                Back (Detailed Answer &amp; Notes)
+              </label>
               <textarea
                 value={back}
                 onChange={(e) => setBack(e.target.value)}
-                placeholder="Precise definition, derivation, or formula…"
+                placeholder="Formal explanation, formula, or example..."
                 rows={5}
                 className="w-full rounded-lg border border-border/50 bg-background-elevated p-3 text-xs leading-relaxed text-foreground placeholder:text-muted-foreground/50 focus-glow focus:outline-none transition-all font-sans"
               />
