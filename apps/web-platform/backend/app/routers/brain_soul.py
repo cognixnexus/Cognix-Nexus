@@ -181,20 +181,20 @@ async def trigger_synthesis(payload: SynthesizeRequest, request: Request) -> dic
             with conn.cursor() as cur:
                 # Brain notes from last 7 days
                 cur.execute(
-                    "SELECT id, title, summary FROM brain_notes "
+                    "SELECT id, title, content FROM notes "
                     "WHERE created_at >= %s "
                     "ORDER BY created_at DESC LIMIT 30",
                     (week_ago,),
                 )
                 for row in cur.fetchall():
-                    snippet = (row.get("summary") or row.get("title") or "")[:250].replace("\n", " ")
+                    snippet = (row.get("content") or row.get("title") or "")[:250].replace("\n", " ")
                     items.append(f"[note] {row['title']}: {snippet}")
                     item_ids.append(f"note:{row['id']}")
 
                 # Brain concepts from last 7 days (if table exists)
                 try:
                     cur.execute(
-                        "SELECT id, name, description FROM brain_concepts "
+                        "SELECT id, name, description FROM concepts "
                         "WHERE created_at >= %s "
                         "ORDER BY created_at DESC LIMIT 20",
                         (week_ago,),
@@ -204,7 +204,7 @@ async def trigger_synthesis(payload: SynthesizeRequest, request: Request) -> dic
                         items.append(f"[concept] {row['name']}: {snippet}")
                         item_ids.append(f"concept:{row['id']}")
                 except Exception:
-                    pass  # brain_concepts table optional
+                    pass  # concepts table optional
     except Exception as exc:
         logger.exception("synthesize: failed to gather knowledge items")
         raise HTTPException(

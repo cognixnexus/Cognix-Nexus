@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import time
@@ -249,7 +250,19 @@ async def security_headers(request: Request, call_next):
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
     if RATE_LIMIT > 0 and request.url.path not in {"/", "/health", "/ready"}:
-        identity = request.headers.get("authorization", "")[:80] or (request.client.host if request.client else "unknown")
+        # Use the JWT sub claim when already decoded, otherwise hash the full
+        # Authorization header so that the shared "Bearer " prefix does not
+        # collapse all users into the same rate-limit bucket.
+        auth_state = getattr(request.state, "auth", None)
+        sub = auth_state.get("sub") if isinstance(auth_state, dict) else None
+        if sub and sub != "anonymous":
+            identity = sub
+        else:
+            raw_header = request.headers.get("authorization", "")
+            if raw_header:
+                identity = hashlib.sha256(raw_header.encode()).hexdigest()
+            else:
+                identity = request.client.host if request.client else "unknown"
         shared_decision = shared_rate_limit_allow(identity, limit=RATE_LIMIT)
         if shared_decision is False:
             response = JSONResponse(
