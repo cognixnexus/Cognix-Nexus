@@ -19,7 +19,7 @@ except ImportError:
     sentry_sdk = None
 
 from app.auth import auth_required, authenticate_request
-from app.routers import activity, advanced_layer, brain_advanced, book_intelligence, brain_agent, brain_documents, brain_media, brain_soul, brain_vault, core_integration, exports, integrations, intelligence, learning_science, level_up, life_integration, media_boundary, processing, release_evidence, reviews, sources, usage, telegram, youtube_tracker, deep_research
+from app.routers import activity, advanced_layer, brain_advanced, book_intelligence, brain_agent, brain_documents, brain_media, brain_soul, brain_vault, core_integration, exports, integrations, intelligence, learning_science, level_up, life_integration, media_boundary, mindmap_quiz, processing, release_evidence, reviews, sources, usage, telegram, youtube_tracker, deep_research
 from app.services.telegram_webhook_setup import configure_telegram_webhook
 from app.services.shared_rate_limit import allow as shared_rate_limit_allow, configured as shared_rate_limit_configured
 from app.store import store
@@ -344,6 +344,7 @@ def _register_api_routes(target):
     target.include_router(telegram.router)
     target.include_router(youtube_tracker.router)
     target.include_router(deep_research.router)
+    target.include_router(mindmap_quiz.router)
 
 
 _register_api_routes(app)

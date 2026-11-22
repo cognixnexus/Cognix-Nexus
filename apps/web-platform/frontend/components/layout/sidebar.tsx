@@ -61,6 +61,7 @@ const navSections = [
       { label: 'Deep Research Lab', href: '/deep-research', icon: Search },
       { label: 'Language Tutor', href: '/tutor', icon: Brain },
       { label: 'Daily Learning Plan', href: '/learning-plan', icon: Sparkles },
+      { label: 'Study & Mindmap', href: '/study-studio', icon: Network },
       { label: 'Document OCR', href: '/documents', icon: FileText },
       { label: 'Secret Vault', href: '/vault', icon: FolderOpen },
       { label: 'Unified Export', href: '/export', icon: GitBranch },
