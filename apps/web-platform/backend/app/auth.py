@@ -8,7 +8,28 @@ from fastapi import HTTPException, Request
 from jwt import PyJWKClient
 
 
-PUBLIC_PATHS = {"/", "/health", "/ready", "/docs", "/openapi.json", "/redoc", "/v1/docs", "/v1/openapi.json", "/v1/redoc", "/integrations/google-drive/callback", "/telegram/webhook", "/v1/telegram/webhook", "/telegram/action", "/v1/telegram/action"}
+PUBLIC_PATHS = {
+    "/",
+    "/health",
+    "/ready",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+    "/v1/docs",
+    "/v1/openapi.json",
+    "/v1/redoc",
+    "/integrations/google-drive/callback",
+    "/telegram/webhook",
+    "/v1/telegram/webhook",
+    "/telegram/action",
+    "/v1/telegram/action",
+}
+
+PUBLIC_PREFIXES = (
+    "/brain/level-up",
+    "/v1/brain/level-up",
+    "/api/v1/brain/level-up",
+)
 
 
 def auth_required() -> bool:
@@ -105,7 +126,8 @@ def _verify_with_supabase(token: str) -> dict:
 
 
 def authenticate_request(request: Request) -> dict:
-    if not auth_required() or request.url.path in PUBLIC_PATHS:
+    path = request.url.path
+    if not auth_required() or path in PUBLIC_PATHS or any(path.startswith(prefix) for prefix in PUBLIC_PREFIXES):
         return {"sub": "anonymous"}
 
     header = request.headers.get("authorization", "")
