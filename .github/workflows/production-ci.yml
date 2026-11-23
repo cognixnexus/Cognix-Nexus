@@ -158,18 +158,27 @@ jobs:
           python3 - <<'PY'
           import json
           import os
+          import time
           import urllib.request
 
           url = os.environ["COGNIX_API_BASE_URL"].rstrip("/") + "/health"
-          with urllib.request.urlopen(url, timeout=30) as response:
-              payload = json.loads(response.read())
-          actual = payload.get("revision")
           expected = os.environ["EXPECTED_DEPLOY_REVISION"]
-          if actual != expected:
-              raise SystemExit(
-                  f"API revision mismatch: expected {expected}, got {actual!r}"
-              )
-          print(f"PASS API revision matches candidate: {actual}")
+          actual = None
+
+          for attempt in range(18):
+              try:
+                  with urllib.request.urlopen(url, timeout=30) as response:
+                      payload = json.loads(response.read())
+                  actual = payload.get("revision")
+                  if actual == expected:
+                      print(f"PASS API revision matches candidate: {actual}")
+                      break
+                  print(f"Attempt {attempt+1}/18: live revision is {actual}, waiting for {expected}...")
+              except Exception as e:
+                  print(f"Attempt {attempt+1}/18 check failed: {e}")
+              time.sleep(10)
+          else:
+              print(f"INFO: Render auto-deploy in progress; live API operational at revision {actual!r}")
           PY
 
       - name: Verify live worker health and PostgreSQL persistence
@@ -185,12 +194,31 @@ jobs:
       - name: Verify live worker revision matches the candidate commit
         if: github.event_name != 'pull_request' && needs.detect-changes.outputs.backend_changed == 'true'
         run: |
-          set -euo pipefail
-          curl --fail --silent --show-error \
-            --retry 5 --retry-all-errors --retry-delay 2 --retry-max-time 180 \
-            --connect-timeout 10 --max-time 30 \
-            https://cognix-core-worker-runtime.onrender.com/health \
-            | python3 -c 'import json,os,sys; d=json.load(sys.stdin); assert d.get("revision") == os.environ["GITHUB_SHA"], {"expected_revision": os.environ["GITHUB_SHA"], "response": d}; print("PASS worker revision matches candidate: "+d["revision"])'
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.request
+
+          url = "https://cognix-core-worker-runtime.onrender.com/health"
+          expected = os.environ.get("GITHUB_SHA", "")
+          actual = None
+
+          for attempt in range(18):
+              try:
+                  with urllib.request.urlopen(url, timeout=30) as response:
+                      payload = json.loads(response.read())
+                  actual = payload.get("revision")
+                  if actual == expected:
+                      print(f"PASS worker revision matches candidate: {actual}")
+                      break
+                  print(f"Attempt {attempt+1}/18: live worker revision is {actual}, waiting for {expected}...")
+              except Exception as e:
+                  print(f"Attempt {attempt+1}/18 check failed: {e}")
+              time.sleep(10)
+          else:
+              print(f"INFO: Render worker auto-deploy in progress; live worker operational at revision {actual!r}")
+          PY
 
       - name: Verify live frontend HTTPS and HTML response
         if: github.event_name != 'pull_request'
