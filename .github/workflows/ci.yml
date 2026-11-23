@@ -29,7 +29,7 @@ jobs:
           python -m pip install -r ../backend/requirements.lock
           COGNIX_DEV_MODE=true PYTHONPATH=../backend python -c "import json; from app.main import v1_app; open('openapi.v1.json','w').write(json.dumps(v1_app.openapi()))"
           mkdir -p src/generated
-          npx --yes openapi-typescript@7.13.0 openapi.v1.json -o src/generated/api-types.d.ts
+          npx --yes openapi-typescript@6.7.6 openapi.v1.json -o src/generated/api-types.d.ts
           test -s src/generated/api-types.d.ts
       - run: npm run typecheck
       - run: npm run lint
