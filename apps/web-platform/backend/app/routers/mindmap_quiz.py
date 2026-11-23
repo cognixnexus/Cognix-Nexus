@@ -44,7 +44,7 @@ def convert_lecture_to_mindmap(payload: MindmapRequest) -> Dict[str, Any]:
 
     for line in lines:
         if line.startswith("#") or line.startswith("**") or ":" in line:
-            clean_title = re.sub(r'^[#*\s]+|[#*\s]+$', "", line).split(":", 1)[0].strip()[:40]
+            clean_title = line.strip("#* \t\r\n").split(":", 1)[0].strip()[:40]
             if clean_title:
                 current_pillar = {"title": clean_title, "subtopics": []}
                 pillars.append(current_pillar)
