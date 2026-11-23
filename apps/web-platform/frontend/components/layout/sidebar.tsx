@@ -112,7 +112,7 @@ export function Sidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto scrollbar-cognix py-4">
+      <nav className="flex-1 overflow-y-auto scrollbar-cognix pt-4 pb-12">
         {navSections.map((section) => (
           <div key={section.label} className="mb-5">
             {!collapsed && (
@@ -236,7 +236,7 @@ export function MobileNav({
             </p>
           </div>
         </div>
-        <nav className="flex-1 overflow-y-auto scrollbar-cognix py-4">
+        <nav className="flex-1 overflow-y-auto scrollbar-cognix pt-4 pb-12">
           {navSections.map((section) => (
             <div key={section.label} className="mb-5">
               <p className="px-4 mb-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground/70">
