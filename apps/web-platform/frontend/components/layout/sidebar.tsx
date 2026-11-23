@@ -162,7 +162,7 @@ export function Sidebar({
       </nav>
 
       {/* Collapse toggle + user */}
-      <div className="border-t border-border/40 p-3">
+      <div className="flex-shrink-0 border-t border-border/40 p-3">
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
