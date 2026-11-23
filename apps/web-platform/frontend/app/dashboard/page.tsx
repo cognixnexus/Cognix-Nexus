@@ -322,8 +322,15 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      listSources(), listProcessing(), listExports(), getActivity(), getReady(),
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 3500)
+    );
+
+    Promise.race([
+      Promise.all([
+        listSources(), listProcessing(), listExports(), getActivity(), getReady(),
+      ]),
+      timeout,
     ]).then(([s, t, e, a, r]) => {
       setSources(s.items.length > 0 ? s.items : DEMO_SOURCES);
       setTasks(t.items.length > 0 ? t.items : [

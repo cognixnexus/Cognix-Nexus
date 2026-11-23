@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard } from '@/components/shared/cognix-primitives';
 import { ApiBrainConcept, createBrainConcept, createBrainConceptLink, getBrainGraph } from '@/lib/api';
@@ -31,6 +32,7 @@ export default function GraphPage() {
   const [to, setTo] = useState('c-2');
   const [selectedConceptId, setSelectedConceptId] = useState<string | null>('c-1');
   const [query, setQuery] = useState('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -76,8 +78,31 @@ export default function GraphPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Knowledge Graph" description="Concepts and explicit relationships form the second-brain graph." />
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="flex items-center justify-between">
+        <PageHeader title="Knowledge Graph" description="Concepts and explicit relationships form the second-brain graph." />
+        <button
+          type="button"
+          onClick={() => setIsFullscreen(!isFullscreen)}
+          className="flex items-center gap-1.5 rounded-lg border border-border bg-card/60 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-card transition"
+          title={isFullscreen ? "Exit Fullscreen" : "Fullscreen View"}
+        >
+          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+        </button>
+      </div>
+      <div className={isFullscreen ? "fixed inset-0 z-50 bg-background/95 backdrop-blur-md p-6 overflow-y-auto" : "grid gap-6 lg:grid-cols-[1fr_360px]"}>
+        {isFullscreen && (
+          <div className="flex justify-between items-center mb-4 pb-2 border-b border-border">
+            <h2 className="text-lg font-bold">Knowledge Graph (Fullscreen)</h2>
+            <button
+              onClick={() => setIsFullscreen(false)}
+              className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-card/80"
+            >
+              <Minimize2 className="h-4 w-4" />
+              <span>Close</span>
+            </button>
+          </div>
+        )}
         <SectionCard title="Interactive concepts" description={concepts.length + ' concepts · ' + edges.length + ' relationships'}>
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter graph concepts" className="min-w-[180px] flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm" aria-label="Filter graph concepts" />
