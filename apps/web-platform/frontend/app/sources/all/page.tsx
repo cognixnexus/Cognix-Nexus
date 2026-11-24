@@ -27,7 +27,13 @@ function AllSourcesContent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    listSources().then(({ items }) => setItems(mergeSources(items))).catch(() => undefined).finally(() => setLoading(false));
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 6000)
+    );
+    Promise.race([listSources(), timeout])
+      .then(({ items }) => setItems(mergeSources(items)))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
   }, []);
 
   const filtered = useMemo(() => items.filter((s) => {

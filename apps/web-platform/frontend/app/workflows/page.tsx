@@ -461,7 +461,7 @@ export default function WorkflowsPage() {
                           <span>Bypassed</span>
                         </span>
                       )}
-                      <span className="font-mono text-muted-foreground">{stage.estimatedLatency}</span>
+                      <span className="font-mono text-muted-foreground">{stage.enabled ? stage.estimatedLatency : null}</span>
                     </div>
                   </div>
                 );
