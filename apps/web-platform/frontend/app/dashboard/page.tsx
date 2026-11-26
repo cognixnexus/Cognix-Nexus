@@ -11,29 +11,15 @@ import {
 } from '@/components/shared/cognix-primitives';
 import { StageBadge } from '@/components/research/workspace-ui';
 import {
-  apiSourceToSource, getActivity, getReady,
-  listExports, listProcessing, listSources,
-  type ApiProcessingTask, type ApiSource,
+  addYoutubeChannel, apiSourceToSource, getActivity, getBrainSoulStatus, getReady,
+  listExports, listProcessing, listSources, listYoutubeChannels, pollYoutubeChannels,
+  synthesizeBrainSoul, type ApiBrainSoulStatus, type ApiProcessingTask, type ApiSource,
+  type ApiYtChannel,
 } from '@/lib/api';
 
 // ─── Brain Soul types ──────────────────────────────────────────────
-interface BrainSoulStatus {
-  total_syntheses?: number;
-  soul_file_entries?: number;
-  latest_synthesis_period?: string;
-  latest_synthesis_at?: string;
-  approved_memories?: number;
-  latest_synthesis_snippet?: string;
-}
-
-interface YtChannel {
-  id: number;
-  channel_id: string;
-  channel_name: string | null;
-  channel_url: string;
-  is_active: boolean;
-  last_polled_at: string | null;
-}
+type BrainSoulStatus = ApiBrainSoulStatus;
+type YtChannel = ApiYtChannel;
 
 // ─── Format Date Helper ─────────────────────────────────────────────
 function fmtD(iso: string | null | undefined) {
@@ -49,9 +35,8 @@ function BrainSoulSection() {
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/v1/brain/soul/status', { credentials: 'include' })
-      .then((r) => r.json())
-      .then((d) => { setData(d as BrainSoulStatus); setLoading(false); })
+    getBrainSoulStatus()
+      .then((d) => { setData(d); setLoading(false); })
       .catch(() => {
         setData({
           total_syntheses: 6,
@@ -69,8 +54,8 @@ function BrainSoulSection() {
     setSynthesizing(true);
     setMsg(null);
     try {
-      const r = await fetch('/v1/brain/soul/synthesize', { method: 'POST', credentials: 'include' });
-      setMsg(r.ok ? 'Synthesis started.' : 'Synthesis failed.');
+      await synthesizeBrainSoul();
+      setMsg('Synthesis started.');
     } catch { setMsg('Local simulation synthesis updated.'); }
     finally { setSynthesizing(false); }
   }
@@ -152,11 +137,8 @@ function YoutubeTrackerSection() {
 
   async function load() {
     try {
-      const r = await fetch('/v1/brain/youtube/channels', { credentials: 'include' });
-      if (r.ok) {
-        const remote = await r.json() as YtChannel[];
-        if (remote.length > 0) setChannels(remote);
-      }
+      const remote = await listYoutubeChannels();
+      if (remote.length > 0) setChannels(remote);
     } catch { /* ignore */ }
   }
 
@@ -166,17 +148,8 @@ function YoutubeTrackerSection() {
     if (!url.trim()) return;
     setAdding(true); setMsg(null); setError(null);
     try {
-      const r = await fetch('/v1/brain/youtube/channels', {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel_url: url }),
-      });
-      if (r.ok) { setMsg('Channel added.'); setUrl(''); void load(); }
-      else {
-        setChannels((prev) => [...prev, { id: Date.now(), channel_id: url, channel_name: url.split('/').pop() || 'New Channel', channel_url: url, is_active: true, last_polled_at: new Date().toISOString() }]);
-        setMsg('Channel added to radar.');
-        setUrl('');
-      }
+      await addYoutubeChannel(url);
+      setMsg('Channel added.'); setUrl(''); void load();
     } catch {
       setChannels((prev) => [...prev, { id: Date.now(), channel_id: url, channel_name: url.split('/').pop() || 'New Channel', channel_url: url, is_active: true, last_polled_at: new Date().toISOString() }]);
       setMsg('Channel added to radar.');
@@ -188,7 +161,7 @@ function YoutubeTrackerSection() {
   async function poll() {
     setPolling(true); setMsg(null);
     try {
-      await fetch('/v1/brain/youtube/poll', { method: 'POST', credentials: 'include' });
+      await pollYoutubeChannels();
       setMsg('RSS feeds polled successfully.');
     } catch {
       setMsg('RSS feeds polled across 2 channels.');

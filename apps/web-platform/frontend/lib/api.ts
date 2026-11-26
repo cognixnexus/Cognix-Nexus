@@ -403,3 +403,39 @@ export function ingestBrainMedia(file: File, ocrLanguage = 'eng') {
     { method: 'POST', body },
   );
 }
+
+export interface ApiBrainSoulStatus {
+  total_syntheses?: number;
+  soul_file_entries?: number;
+  latest_synthesis_period?: string;
+  latest_synthesis_at?: string;
+  approved_memories?: number;
+  latest_synthesis_snippet?: string;
+}
+export function getBrainSoulStatus() {
+  return request<ApiBrainSoulStatus>('/brain/soul/status');
+}
+export function synthesizeBrainSoul() {
+  return request<Record<string, unknown>>('/brain/soul/synthesize', { method: 'POST' });
+}
+
+export interface ApiYtChannel {
+  id: number;
+  channel_id: string;
+  channel_name: string | null;
+  channel_url: string;
+  is_active: boolean;
+  last_polled_at: string | null;
+}
+export function listYoutubeChannels() {
+  return request<ApiYtChannel[]>('/brain/youtube/channels');
+}
+export function addYoutubeChannel(channelUrl: string) {
+  return request<ApiYtChannel>('/brain/youtube/channels', {
+    method: 'POST',
+    body: JSON.stringify({ channel_url: channelUrl }),
+  });
+}
+export function pollYoutubeChannels() {
+  return request<Record<string, unknown>>('/brain/youtube/poll', { method: 'POST' });
+}
